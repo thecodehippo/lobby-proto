@@ -1,183 +1,432 @@
 // src/lobby/LobbyApp.jsx
-import React from "react";
+import React, { useMemo } from "react";
 import {
   Routes,
   Route,
   useParams,
   useNavigate,
-  useLocation,
+  Link,
   Navigate,
 } from "react-router-dom";
 import { useCms } from "@/cms/CmsContext.jsx";
-import Header from "./Header.jsx";
-import NavBar from "./NavBar.jsx";
-import SecondaryNav from "./SecondaryNav.jsx";
+import Icon from "@/shared/Icon.jsx";
 
-// ---------- helpers ----------
-const labelFor = (cat, loc) =>
-  (cat.nav_label && cat.nav_label[loc]) || cat.name || cat.id;
-const slugFor = (cat, loc) =>
-  (cat.slug && cat.slug[loc] && cat.slug[loc].trim()) || "";
-const pathFor = (cat, loc) => `/${slugFor(cat, loc) || cat.id}`; // "/<slug>" or "/<id>"
+export default function LobbyApp() {
+  return (
+    <Routes>
+      <Route path="/" element={<NavigateToDefault />} />
+      <Route path="/:locale" element={<NavigateToHome />} />
+      <Route path="/:locale/:categorySlug" element={<CategoryPage />} />
+      <Route
+        path="/:locale/:categorySlug/:subcatSlug"
+        element={<CategoryPage />}
+      />
+    </Routes>
+  );
+}
 
-// ---------- shell ----------
-function LobbyShell() {
-  const { selectedBrand } = useCms();
-  const { pathname } = useLocation();
+function NavigateToDefault() {
+  const { brands } = useCms();
   const navigate = useNavigate();
+  React.useEffect(() => {
+    const b = brands[0];
+    const defaultLocale = b?.locales?.[0] || "en-GB";
+    navigate(`/${encodeURIComponent(defaultLocale)}`, { replace: true });
+  }, [brands, navigate]);
+  return null;
+}
 
-  // Locale comes ONLY from URL. Fallback to first brand locale when missing.
-  const parts = pathname.split("/").filter(Boolean);
-  const currentLocale = parts[0] || selectedBrand?.locales?.[0] || null;
-  const currentSlug = parts[1] || null;
+function NavigateToHome() {
+  const { brands } = useCms();
+  const { locale } = useParams();
+  const navigate = useNavigate();
+  React.useEffect(() => {
+    const b = brands[0];
+    if (!b) return;
+    const home = (b.categories || []).find((c) => c.is_home);
+    const homeSlug = home?.slug?.[locale] || home?.id;
+    navigate(`/${encodeURIComponent(locale)}/${encodeURIComponent(homeSlug)}`, {
+      replace: true,
+    });
+  }, [brands, locale, navigate]);
+  return null;
+}
 
-  const onChangeLocale = (newLocale) => {
-    if (!selectedBrand) return;
-    if (currentSlug) {
-      // try to keep same category across locales
-      const cats = selectedBrand.categories;
-      const catBySlug = cats.find(
-        (c) => slugFor(c, currentLocale) === currentSlug
-      );
-      const cat = catBySlug || cats.find((c) => c.id === currentSlug);
-      if (cat) {
-        navigate(`/${newLocale}${pathFor(cat, newLocale)}`, { replace: true });
-        return;
-      }
+function CategoryPage() {
+  const { brands } = useCms();
+  const { locale, categorySlug, subcatSlug } = useParams();
+  const brand = brands[0]; // bwincom for now
+
+  const {
+    category,
+    parentForSubnav,
+    subnavItems,
+    allRootCats,
+    subcategoriesForCategory,
+    selectedSubcategory, // when subcat route
+  } = useMemo(() => {
+    if (!brand) {
+      return {
+        category: null,
+        parentForSubnav: null,
+        subnavItems: [],
+        allRootCats: [],
+        subcategoriesForCategory: [],
+        selectedSubcategory: null,
+      };
     }
-    // no category in path or couldn’t resolve -> go to that locale’s home
-    navigate(`/${newLocale}`, { replace: true });
-  };
+
+    const cats = brand.categories || [];
+    const subcats = brand.subcategories || [];
+
+    const findCategoryBySlugOrId = (slugVal) =>
+      cats.find(
+        (c) =>
+          (c.slug?.[locale] || "").toLowerCase() ===
+          String(slugVal).toLowerCase()
+      ) || cats.find((c) => c.id === slugVal);
+
+    const cat = findCategoryBySlugOrId(categorySlug) || null;
+    const parent = cat
+      ? cat.parent_id
+        ? cats.find((c) => c.id === cat.parent_id) || null
+        : cat
+      : null;
+
+    const siblingsOrChildren = parent
+      ? cats
+          .filter((c) => c.parent_id === parent.id)
+          .sort((a, z) => (a.order || 0) - (z.order || 0))
+      : [];
+
+    const roots = cats
+      .filter((c) => c.parent_id == null)
+      .sort((a, z) => (a.order || 0) - (z.order || 0));
+
+    const subsForCat = cat
+      ? subcats
+          .filter((s) => s.parent_category === cat.id)
+          .sort((a, z) => (a.order || 0) - (z.order || 0))
+      : [];
+
+    // if subcat route present, find that subcategory under this category by slug (or exact id)
+    let selectedSubcat = null;
+    if (cat && subcatSlug) {
+      selectedSubcat =
+        subsForCat.find(
+          (s) =>
+            (s.slug?.[locale] || "").toLowerCase() ===
+            String(subcatSlug).toLowerCase()
+        ) ||
+        subsForCat.find((s) => s.id === subcatSlug) ||
+        null;
+    }
+
+    return {
+      category: cat,
+      parentForSubnav: parent,
+      subnavItems: siblingsOrChildren,
+      allRootCats: roots,
+      subcategoriesForCategory: subsForCat,
+      selectedSubcategory: selectedSubcat,
+    };
+  }, [brand, locale, categorySlug, subcatSlug]);
+
+  if (!brand) return <div style={{ padding: 16 }}>Loading…</div>;
+  if (!category) return <div style={{ padding: 16 }}>Category not found.</div>;
+
+  const localeSafe = locale;
+
+  // If subcategory is specified but not found, just show category view (all modules)
+  const modulesToShow = selectedSubcategory
+    ? [selectedSubcategory]
+    : subcategoriesForCategory;
 
   return (
-    <div style={styles.wrapper}>
-      <Header
-        brandName={selectedBrand?.name}
-        locales={selectedBrand?.locales || []}
-        locale={currentLocale}
-        onChangeLocale={onChangeLocale}
-      />
-      {/* NavBar derives locale from URL and prefixes links */}
-      <NavBar />
-      <SecondaryNav />
+    <div style={styles.page}>
+      {/* Header */}
+      <header style={styles.header}>
+        <div style={styles.brand}>{brand.name}</div>
+        <LocalePicker locales={brand.locales} current={localeSafe} />
+      </header>
 
-      <main style={styles.main}>
-        <div style={styles.content}>
-          <Routes>
-            {/* "/" -> redirect to "/<first-locale>" */}
-            <Route path="/" element={<DefaultLocaleRedirect />} />
-            {/* "/:locale" -> redirect to that locale's home */}
-            <Route path="/:locale" element={<LocaleHomeRedirect />} />
-            {/* "/:locale/:slug" -> category page (nav or hidden) */}
-            <Route path="/:locale/:slug" element={<CategoryRoute />} />
-            {/* unknown -> root */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </div>
-      </main>
+      {/* Primary nav (root categories) */}
+      <nav style={styles.nav}>
+        {allRootCats.map((c) => {
+          const slug = c.slug?.[localeSafe] || c.id;
+          const active = c.id === category.id || c.id === category.parent_id;
+          return (
+            <Link
+              key={c.id}
+              to={`/${encodeURIComponent(localeSafe)}/${encodeURIComponent(
+                slug
+              )}`}
+              style={{
+                ...styles.navItem,
+                ...(active ? styles.navItemActive : {}),
+              }}
+            >
+              {c.nav_icon ? <Icon name={c.nav_icon} size={16} /> : null}
+              <span>{c.nav_label?.[localeSafe] || ""}</span>
+            </Link>
+          );
+        })}
+      </nav>
+
+      {/* Secondary nav persists, tied to parentForSubnav (siblings-of-child or children-of-parent) */}
+      {parentForSubnav && subnavItems.length > 0 && (
+        <nav style={styles.subnav}>
+          {subnavItems.map((c) => {
+            const slug = c.slug?.[localeSafe] || c.id;
+            const active = c.id === category.id;
+            return (
+              <Link
+                key={c.id}
+                to={`/${encodeURIComponent(localeSafe)}/${encodeURIComponent(
+                  slug
+                )}`}
+                style={{
+                  ...styles.subnavItem,
+                  ...(active ? styles.subnavItemActive : {}),
+                }}
+              >
+                {c.nav_icon ? <Icon name={c.nav_icon} size={14} /> : null}
+                <span>{c.nav_label?.[localeSafe] || ""}</span>
+              </Link>
+            );
+          })}
+        </nav>
+      )}
+
+      {/* Page title */}
+      <div style={styles.titleRow}>
+        <h1 style={styles.h1}>
+          {category.nav_label?.[localeSafe] || ""}
+          {selectedSubcategory && (
+            <span style={styles.h1Sub}>
+              {/* separator + subcat label if available */}
+              {selectedSubcategory.label?.[localeSafe]
+                ? ` — ${selectedSubcategory.label?.[localeSafe]}`
+                : ""}
+            </span>
+          )}
+        </h1>
+      </div>
+
+      {/* Modules (subcategory blocks) */}
+      <section style={styles.modulesWrap}>
+        {modulesToShow.map((sc) => {
+          const scSlug = sc.slug?.[localeSafe];
+          const link = scSlug
+            ? `/${encodeURIComponent(localeSafe)}/${encodeURIComponent(
+                category.slug?.[localeSafe] || category.id
+              )}/${encodeURIComponent(scSlug)}`
+            : null;
+
+          return (
+            <ModuleBlock
+              key={sc.id}
+              icon={sc.icon}
+              label={sc.label?.[localeSafe] || ""}
+              labelSub={sc.label_sub?.[localeSafe] || ""}
+              type={sc.type}
+              layout={sc.layout_type}
+              href={link}
+              active={!!selectedSubcategory && selectedSubcategory.id === sc.id}
+            />
+          );
+        })}
+
+        {modulesToShow.length === 0 && (
+          <div style={styles.empty}>
+            No subcategories configured for this category.
+          </div>
+        )}
+      </section>
     </div>
   );
 }
 
-// ---------- redirects ----------
-function DefaultLocaleRedirect() {
-  const { selectedBrand } = useCms();
+function LocalePicker({ locales, current }) {
   const navigate = useNavigate();
-  React.useEffect(() => {
-    if (!selectedBrand) return;
-    const firstLoc = selectedBrand.locales?.[0] || "en-GB";
-    navigate(`/${firstLoc}`, { replace: true });
-  }, [selectedBrand, navigate]);
-  return <div>Loading…</div>;
-}
-
-function LocaleHomeRedirect() {
-  const { selectedBrand } = useCms();
-  const { locale } = useParams();
-  const navigate = useNavigate();
-  React.useEffect(() => {
-    if (!selectedBrand || !locale) return;
-    const parents = selectedBrand.categories.filter(
-      (c) => c.parent_id === null
-    );
-    const home =
-      parents.find((c) => c.is_home) ||
-      parents.find((c) => c.displayed_in_nav) ||
-      parents[0];
-    if (home) navigate(`/${locale}${pathFor(home, locale)}`, { replace: true });
-  }, [selectedBrand, locale, navigate]);
-  return <div>Loading home…</div>;
-}
-
-// ---------- route: category (supports hidden & canonical slugs) ----------
-function CategoryRoute() {
-  const { selectedBrand } = useCms();
-  const { locale, slug } = useParams();
-
-  if (!selectedBrand) return <div style={{ padding: 16 }}>No brand.</div>;
-  const loc = locale || selectedBrand.locales?.[0];
-
-  // Match ANY category (even if displayed_in_nav is false)
-  const bySlug = selectedBrand.categories.find(
-    (c) => slug && slugFor(c, loc) === slug
+  const { categorySlug, subcatSlug } = useParams();
+  return (
+    <div style={styles.localeWrap}>
+      <select
+        value={current}
+        onChange={(e) => {
+          const next = e.target.value;
+          // Keep current category/subcategory slug when switching locale
+          if (subcatSlug) {
+            navigate(
+              `/${encodeURIComponent(next)}/${encodeURIComponent(
+                categorySlug
+              )}/${encodeURIComponent(subcatSlug)}`
+            );
+          } else {
+            navigate(
+              `/${encodeURIComponent(next)}/${encodeURIComponent(categorySlug)}`
+            );
+          }
+        }}
+        style={styles.localeSelect}
+      >
+        {locales.map((l) => (
+          <option key={l} value={l}>
+            {l}
+          </option>
+        ))}
+      </select>
+    </div>
   );
-  const byId = selectedBrand.categories.find((c) => c.id === slug);
-  const cat = bySlug || byId;
+}
 
-  if (!cat) return <Navigate to={`/${loc}`} replace />;
-
-  // Canonicalize URL to locale-specific slug if available
-  const desired = pathFor(cat, loc); // "/<slug>" or "/<id>" if no slug
-  const current = `/${slug}`;
-  if (desired !== current) {
-    return <Navigate to={`/${loc}${desired}`} replace />;
-  }
+function ModuleBlock({ icon, label, labelSub, type, layout, href, active }) {
+  const headerInner = (
+    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      {icon ? <Icon name={icon} size={18} /> : null}
+      <div>
+        {label ? <div style={styles.moduleTitle}>{label}</div> : null}
+        {labelSub ? <div style={styles.moduleSub}>{labelSub}</div> : null}
+      </div>
+    </div>
+  );
 
   return (
-    <section>
-      <h2 style={{ marginTop: 0 }}>{labelFor(cat, loc)}</h2>
-      <p>
-        <strong>Category ID:</strong> {cat.id}
-      </p>
-      <p>
-        <strong>Displayed in nav:</strong> {String(!!cat.displayed_in_nav)}
-      </p>
-      <p>
-        <strong>Level:</strong>{" "}
-        {cat.parent_id === null ? "Parent" : "Child of " + cat.parent_id}
-      </p>
-      <p>
-        <strong>Slug ({loc}):</strong>{" "}
-        {slugFor(cat, loc) || "(none set, using id in URL)"}
-      </p>
-      <div style={{ marginTop: 12, fontSize: 12, color: "#6b7280" }}>
-        (Page content will render here from CMS layout/config)
+    <article
+      style={{ ...styles.module, ...(active ? styles.moduleActive : {}) }}
+    >
+      <div style={styles.moduleHeader}>
+        {href ? (
+          <Link to={href} style={styles.moduleHeaderLink}>
+            {headerInner}
+          </Link>
+        ) : (
+          headerInner
+        )}
+        <div style={styles.moduleMeta}>
+          <span style={styles.metaPill}>{type}</span>
+          <span style={styles.metaPill}>{layout}</span>
+        </div>
       </div>
-    </section>
+
+      {/* empty body for now */}
+      <div style={styles.moduleBody}>
+        <div style={styles.placeholderGrid}>
+          <div style={styles.placeholderCard} />
+          <div style={styles.placeholderCard} />
+          <div style={styles.placeholderCard} />
+          <div style={styles.placeholderCard} />
+        </div>
+      </div>
+    </article>
   );
 }
 
-// ---------- top-level component (no BrowserRouter here) ----------
-export default function LobbyApp() {
-  const { selectedBrand, loading } = useCms();
-  if (loading) return <div style={{ padding: 20 }}>Loading…</div>;
-  if (!selectedBrand) return <div style={{ padding: 20 }}>No brand found.</div>;
-  return <LobbyShell />;
-}
-
-// ---------- styles ----------
 const styles = {
-  wrapper: {
-    minHeight: "100vh",
+  page: { minHeight: "100vh", background: "#fff" },
+  header: {
     display: "flex",
-    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "12px 16px",
+    borderBottom: "1px solid #e5e7eb",
+  },
+  brand: { fontWeight: 700, fontSize: 18 },
+  localeWrap: {},
+  localeSelect: {
+    padding: "6px 8px",
+    border: "1px solid #d1d5db",
+    borderRadius: 8,
     background: "#fff",
   },
-  main: { flex: 1, padding: 16 },
-  content: {
-    padding: 16,
-    border: "1px dashed #d1d5db",
-    borderRadius: 12,
-    background: "#ffffff",
+
+  nav: {
+    display: "flex",
+    gap: 8,
+    padding: "8px 16px",
+    borderBottom: "1px solid #e5e7eb",
   },
+  navItem: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 8,
+    padding: "6px 10px",
+    border: "1px solid #e5e7eb",
+    borderRadius: 999,
+    textDecoration: "none",
+    color: "#111827",
+    background: "#fff",
+  },
+  navItemActive: {
+    background: "#111827",
+    color: "#fff",
+    border: "1px solid #111827",
+  },
+
+  subnav: {
+    display: "flex",
+    gap: 8,
+    padding: "8px 16px",
+    borderBottom: "1px solid #f3f4f6",
+    background: "#fafafa",
+  },
+  subnavItem: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 8,
+    padding: "6px 10px",
+    border: "1px solid #e5e7eb",
+    borderRadius: 8,
+    textDecoration: "none",
+    color: "#111827",
+    background: "#fff",
+  },
+  subnavItemActive: { background: "#eef2ff", border: "1px solid #e5e7eb" },
+
+  titleRow: { padding: "14px 16px" },
+  h1: { margin: 0, fontSize: 20 },
+  h1Sub: { fontWeight: 400, fontSize: 16, color: "#6b7280" },
+
+  modulesWrap: { padding: "8px 16px", display: "grid", gap: 12 },
+  module: {
+    border: "1px solid #e5e7eb",
+    borderRadius: 12,
+    overflow: "hidden",
+    background: "#fff",
+  },
+  moduleActive: { boxShadow: "inset 0 0 0 2px #4f46e5" },
+  moduleHeader: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "10px 12px",
+    borderBottom: "1px solid #f3f4f6",
+  },
+  moduleHeaderLink: { textDecoration: "none", color: "inherit" },
+  moduleTitle: { fontWeight: 600 },
+  moduleSub: { fontSize: 12, color: "#6b7280" },
+  moduleMeta: { display: "flex", gap: 6 },
+  metaPill: {
+    fontSize: 12,
+    padding: "2px 8px",
+    border: "1px solid #e5e7eb",
+    borderRadius: 999,
+    background: "#fff",
+  },
+
+  moduleBody: { padding: "12px" },
+  placeholderGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+    gap: 10,
+  },
+  placeholderCard: {
+    height: 80,
+    border: "1px dashed #d1d5db",
+    borderRadius: 10,
+    background: "#f9fafb",
+  },
+
+  empty: { padding: "16px", color: "#6b7280", fontStyle: "italic" },
 };
