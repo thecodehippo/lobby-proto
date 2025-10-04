@@ -5,6 +5,7 @@ import { useCms } from "./CmsContext.jsx";
 import Sidebar from "./Sidebar.jsx";
 import BrandEditor from "./BrandEditor.jsx";
 import CategoryEditor from "./CategoryEditor.jsx";
+import SubcategoryEditor from "./SubcategoryEditor.jsx";
 
 export default function CmsApp() {
   const { loading, selection, selectedBrand, actions } = useCms();
@@ -25,32 +26,66 @@ export default function CmsApp() {
     actions.addCategory(selectedBrand.id);
   };
 
+  const handleAddSubcategory = () => {
+    if (!selectedBrand) return;
+    const parentCategoryId =
+      selection.scope === "category" ? selection.id : null;
+    actions.addSubcategory(selectedBrand.id, parentCategoryId);
+  };
+
   return (
     <div style={styles.appWrap}>
       <Sidebar />
 
       <main style={styles.main}>
-        {/* BRAND VIEW */}
+        {/* GLOBAL: list is in sidebar; main shows editor when a global subcat is selected */}
+        {(selection.scope === "global" ||
+          selection.scope === "g-subcategory") && (
+          <section style={styles.panel}>
+            <header style={styles.header}>
+              <h2 style={styles.h2}>
+                {selection.scope === "global"
+                  ? "Global"
+                  : "Global subcategory editor"}
+              </h2>
+            </header>
+            <SubcategoryEditor />
+            {selection.scope === "global" && (
+              <div style={styles.note}>
+                Use “+ Global subcategory” in the left panel to create one.
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* BRAND */}
         {selection.scope === "brand" && (
           <section style={styles.panel}>
             <header style={styles.header}>
               <h2 style={styles.h2}>
                 Brand: <span style={styles.mono}>{selectedBrand?.name}</span>
               </h2>
-              <button onClick={handleAddCategory} style={styles.addBtn}>
-                + Add category
-              </button>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={handleAddCategory} style={styles.addBtn}>
+                  + Add category
+                </button>
+                <button
+                  onClick={handleAddSubcategory}
+                  style={styles.addBtnSecondary}
+                >
+                  + Add subcategory
+                </button>
+              </div>
             </header>
 
             <BrandEditor />
-
             <div style={styles.note}>
-              Select a category on the left to edit it.
+              Select a category or subcategory on the left to edit it.
             </div>
           </section>
         )}
 
-        {/* CATEGORY VIEW */}
+        {/* CATEGORY */}
         {selection.scope === "category" && (
           <section style={styles.panel}>
             <header style={styles.header}>
@@ -58,12 +93,45 @@ export default function CmsApp() {
                 Category editor —{" "}
                 <span style={styles.mono}>{selectedBrand?.name}</span>
               </h2>
-              <button onClick={handleAddCategory} style={styles.addBtn}>
-                + Add category
-              </button>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={handleAddCategory} style={styles.addBtn}>
+                  + Add category
+                </button>
+                <button
+                  onClick={handleAddSubcategory}
+                  style={styles.addBtnSecondary}
+                >
+                  + Add subcategory
+                </button>
+              </div>
             </header>
 
             <CategoryEditor />
+          </section>
+        )}
+
+        {/* BRAND SUBCATEGORY */}
+        {selection.scope === "subcategory" && (
+          <section style={styles.panel}>
+            <header style={styles.header}>
+              <h2 style={styles.h2}>
+                Subcategory editor —{" "}
+                <span style={styles.mono}>{selectedBrand?.name}</span>
+              </h2>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={handleAddCategory} style={styles.addBtn}>
+                  + Add category
+                </button>
+                <button
+                  onClick={handleAddSubcategory}
+                  style={styles.addBtnSecondary}
+                >
+                  + Add subcategory
+                </button>
+              </div>
+            </header>
+
+            <SubcategoryEditor />
           </section>
         )}
       </main>
@@ -74,12 +142,12 @@ export default function CmsApp() {
 const styles = {
   appWrap: {
     display: "grid",
-    gridTemplateColumns: "280px 1fr",
+    gridTemplateColumns: "272px 1fr",
     minHeight: "100vh",
     background: "#fff",
   },
   sidebarSkeleton: {
-    width: 280,
+    width: 272,
     borderRight: "1px solid #e5e7eb",
     background: "#fafafa",
   },
@@ -103,6 +171,14 @@ const styles = {
     border: "1px solid #111827",
     background: "#111827",
     color: "#fff",
+    cursor: "pointer",
+  },
+  addBtnSecondary: {
+    padding: "8px 12px",
+    borderRadius: 8,
+    border: "1px solid #e5e7eb",
+    background: "#fff",
+    color: "#111827",
     cursor: "pointer",
   },
 };

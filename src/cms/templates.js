@@ -17,3 +17,18 @@ export const TEMPLATE_KEYS = {
   MINIGAMES_SPORTSBOOK: "Minigames Sportsbook",
   STANDARD: "Standard lobby category",
 };
+
+export const SUBCATEGORY_TYPES = [
+  "Game List",
+  "Module",
+  "Collections",
+  "Personalised",
+];
+
+export const LAYOUT_TYPES = [
+  "Carousel",
+  "Grid 4",
+  "Grid 6",
+  "Hero + Grid",
+  "Stacked list",
+];
