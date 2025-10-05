@@ -32,42 +32,7 @@ function normalizeTemplate(value) {
   return lbl || DEFAULT_TEMPLATE;
 }
 
-const ensureKeys = (obj, keys) => {
-  const base = { ...(obj || {}) };
-  keys.forEach((k) => {
-    if (!(k in base)) base[k] = "";
-  });
-  return base;
-};
-
-/* ---------------- seed ---------------- */
-
-const initialBrands = [
-  {
-    id: "bwincom",
-    name: "bwincom",
-    locales: ["en-GB"], // brand locales (lobby uses these)
-    categories: [
-      {
-        id: "cat-home",
-        name: "Home",
-        parent_id: null,
-        order: 0,
-        slug: { "en-GB": "home" },
-        nav_label: { "en-GB": "Home" },
-        displayed_in_nav: true,
-        template: DEFAULT_TEMPLATE,
-        is_home: true,
-        nav_icon: "home",
-        new_games_count: false,
-        type: "category",
-        url: "",
-        // global_category_id: null, // when set, inherit from that global category
-      },
-    ],
-    subcategories: [], // brand subcategories
-  },
-];
+// No seed data - all data comes from database/API
 
 /* ---------------- context ---------------- */
 
@@ -85,8 +50,7 @@ export const useCms = () => useContext(CmsCtx);
  */
 
 export function CmsProvider({ children }) {
-  /* ---- state ---- */
-  const [brands, setBrands] = useState(initialBrands);
+  const [brands, setBrands] = useState([]);
 
   // global locales that drive translations for global cats/subcats
   const [globalLocales, setGlobalLocales] = useState(["en-gb", "de-at"]);
@@ -222,7 +186,15 @@ export function CmsProvider({ children }) {
         new_games_count: !!c.new_games_count,
         type: c.type || "category",
         url: c.url || "",
-        global_category_id: c.global_category_id ?? null,
+        global_category_id: c.global_category_id || null,
+        // targeting
+        targeting: {
+          devices: c.targeting?.devices || ["mobile", "desktop"],
+          countries: c.targeting?.countries || ["UK", "Ireland", "Austria", "Canada", "Ontario", "France"],
+          segment: c.targeting?.segment || null,
+          internal_only: !!c.targeting?.internal_only,
+          player_ids: Array.isArray(c.targeting?.player_ids) ? c.targeting.player_ids : [],
+        },
       }));
       b.subcategories = (b.subcategories || []).map((sc) => ({
         id: sc.id || uid(),
@@ -246,21 +218,40 @@ export function CmsProvider({ children }) {
   }
 
   function normalizeLoadedGlobalCategories(raw) {
-    return (raw || []).map((c) => ({
-      id: c.id || uid(),
-      name: c.name || "Global Category",
-      parent_id: c.parent_id ?? null,
-      order: c.order ?? 0,
-      displayed_in_nav: !!c.displayed_in_nav,
-      template: normalizeTemplate(c.template),
-      is_home: !!c.is_home,
-      nav_icon: c.nav_icon || "",
-      new_games_count: !!c.new_games_count,
-      type: c.type || "category",
-      url: c.url || "",
-      slug: { ...(c.slug || {}) }, // locales are validated in editors
-      nav_label: { ...(c.nav_label || {}) },
-    }));
+    const arr = deepClone(raw || []);
+    const ensured = arr.map((c) => {
+      const lowerSlug = { ...(c.slug || {}) };
+      const lowerLabel = { ...(c.nav_label || {}) };
+      // ensure keys exist; keep case-liberal
+      lowerSlug["en-gb"] = lowerSlug["en-gb"] || "";
+      lowerSlug["de-at"] = lowerSlug["de-at"] || "";
+      lowerLabel["en-gb"] = lowerLabel["en-gb"] || c.name || "Global";
+      lowerLabel["de-at"] = lowerLabel["de-at"] || c.name || "Global";
+
+      return {
+        id: c.id || uid(),
+        name: c.name || "Global Category",
+        parent_id: c.parent_id ?? null,
+        order: c.order ?? 0,
+        slug: lowerSlug,
+        nav_label: lowerLabel,
+        displayed_in_nav: !!c.displayed_in_nav,
+        template: normalizeTemplate(c.template),
+        is_home: !!c.is_home,
+        nav_icon: c.nav_icon || "",
+        new_games_count: !!c.new_games_count,
+        type: c.type || "category",
+        url: c.url || "",
+        targeting: {
+          devices: c.targeting?.devices || ["mobile", "desktop"],
+          countries: c.targeting?.countries || ["UK", "Ireland", "Austria", "Canada", "Ontario", "France"],
+          segment: c.targeting?.segment || null,
+          internal_only: !!c.targeting?.internal_only,
+          player_ids: Array.isArray(c.targeting?.player_ids) ? c.targeting.player_ids : [],
+        },
+      };
+    });
+    return ensured;
   }
 
   function normalizeLoadedGlobalSubcategories(raw) {
@@ -343,6 +334,13 @@ export function CmsProvider({ children }) {
         type: "category",
         url: "",
         global_category_id: null,
+        targeting: {
+          devices: ["mobile", "desktop"],
+          countries: ["UK", "Ireland", "Austria", "Canada", "Ontario", "France"],
+          segment: null,
+          internal_only: false,
+          player_ids: [],
+        },
       };
       b.categories.push(cat);
       persist(next);
@@ -594,8 +592,13 @@ export function CmsProvider({ children }) {
         new_games_count: false,
         type: "category",
         url: "",
-        slug: ensureKeys({}, globalLocales),
-        nav_label: ensureKeys({}, globalLocales),
+        targeting: {
+          devices: ["mobile", "desktop"],
+          countries: ["UK", "Ireland", "Austria", "Canada", "Ontario", "France"],
+          segment: null,
+          internal_only: false,
+          player_ids: [],
+        },
       };
       next.push(gc);
       persistGlobals(next, globalCategorySubcategories);
@@ -834,8 +837,51 @@ export function CmsProvider({ children }) {
 
     // base effective = brand structural fields
     const eff = {
-      ...cat,
-      template: normalizeTemplate(cat.template),
+      // structural (brand-owned)
+      id: cat.id,
+      name: cat.name,
+      parent_id: cat.parent_id,
+      is_home: !!cat.is_home,
+
+      // inherited/presentational
+      displayed_in_nav:
+        global?.displayed_in_nav !== undefined
+          ? !!global.displayed_in_nav
+          : !!cat.displayed_in_nav,
+      template:
+        global?.template !== undefined
+          ? normalizeTemplate(global.template)
+          : normalizeTemplate(cat.template),
+      nav_icon: global?.nav_icon || cat.nav_icon || "",
+      new_games_count:
+        global?.new_games_count !== undefined
+          ? !!global.new_games_count
+          : !!cat.new_games_count,
+      type: global?.type || cat.type || "category",
+      url: global?.url || cat.url || "",
+
+      // translations (prefer global)
+      nav_label: {
+        ...(cat.nav_label || {}),
+        ...(global?.nav_label || {}),
+      },
+      slug: {
+        ...(cat.slug || {}),
+        ...(global?.slug || {}),
+      },
+
+      // order used for lists (brand's)
+      order: cat.order || 0,
+      // linked
+      global_category_id: cat.global_category_id || null,
+      // targeting (brand-owned, not inherited)
+      targeting: cat.targeting || {
+        devices: ["mobile", "desktop"],
+        countries: ["UK", "Ireland", "Austria", "Canada", "Ontario", "France"],
+        segment: null,
+        internal_only: false,
+        player_ids: [],
+      },
     };
 
     if (linked) {

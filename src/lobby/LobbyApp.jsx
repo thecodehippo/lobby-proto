@@ -10,18 +10,23 @@ import {
 } from "react-router-dom";
 import { useCms } from "@/cms/CmsContext.jsx";
 import Icon from "@/shared/Icon.jsx";
+import { evaluateTargeting } from "@/cms/targeting.js";
+import { TargetingProvider, useTargeting } from "./TargetingContext.jsx";
+import TargetingSimulator from "./TargetingSimulator.jsx";
 
 export default function LobbyApp() {
   return (
-    <Routes>
-      <Route path="/" element={<NavigateToDefault />} />
-      <Route path="/:locale" element={<NavigateToHome />} />
-      <Route path="/:locale/:categorySlug" element={<CategoryPage />} />
-      <Route
-        path="/:locale/:categorySlug/:subcatSlug"
-        element={<CategoryPage />}
-      />
-    </Routes>
+    <TargetingProvider>
+      <Routes>
+        <Route path="/" element={<NavigateToDefault />} />
+        <Route path="/:locale" element={<NavigateToHome />} />
+        <Route path="/:locale/:categorySlug" element={<CategoryPage />} />
+        <Route
+          path="/:locale/:categorySlug/:subcatSlug"
+          element={<CategoryPage />}
+        />
+      </Routes>
+    </TargetingProvider>
   );
 }
 
@@ -84,7 +89,8 @@ function NavigateToHome() {
 function CategoryPage() {
   const { brands, resolveCategory, loading } = useCms();
   const { locale, categorySlug, subcatSlug } = useParams();
-  const brand = brands[0];
+  const brand = brands[0]; // bwincom for now
+  const { updateTargeting, ...targetingContext } = useTargeting();
 
   const {
     category, // brand-local matched category
@@ -147,22 +153,22 @@ function CategoryPage() {
       ? cats.find((c) => c.id === cat.parent_id) || null
       : cat;
 
-    // Primary nav shows root categories that are displayed_in_nav
+    // roots for primary nav (parents only), filtered by effective displayed_in_nav and targeting
     const roots = cats
       .filter((c) => c.parent_id == null)
       .filter((c) => {
         const eff = resolveCategory(brand.id, c.id) || c;
-        return !!eff.displayed_in_nav;
+        return !!eff.displayed_in_nav && evaluateTargeting(c.targeting, targetingContext);
       })
       .sort((a, z) => (a.order || 0) - (z.order || 0));
 
-    // Secondary nav = children of parent (or siblings of current child), filtered by displayed_in_nav
+    // siblings/children for secondary nav, filtered by effective displayed_in_nav and targeting
     const siblingsOrChildren = parent
       ? cats
           .filter((c) => c.parent_id === parent.id)
           .filter((c) => {
             const eff = resolveCategory(brand.id, c.id) || c;
-            return !!eff.displayed_in_nav;
+            return !!eff.displayed_in_nav && evaluateTargeting(c.targeting, targetingContext);
           })
           .sort((a, z) => (a.order || 0) - (z.order || 0))
       : [];
@@ -196,7 +202,7 @@ function CategoryPage() {
       subcategoriesForCategory: subsForCat,
       selectedSubcategory: selectedSubcat,
     };
-  }, [brand, locale, categorySlug, subcatSlug, resolveCategory]);
+  }, [brand, locale, categorySlug, subcatSlug, resolveCategory, targetingContext]);
 
   // If slug is stale/missing, redirect to the same home/first-parent fallback
   const navigate = useNavigate();
@@ -244,6 +250,9 @@ function CategoryPage() {
 
   return (
     <div style={styles.page}>
+      {/* Targeting Simulator */}
+      <TargetingSimulator />
+      
       {/* Header */}
       <header style={styles.header}>
         <div style={styles.brand}>{brand.name}</div>

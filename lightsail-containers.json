@@ -1,0 +1,35 @@
+{
+  "serviceName": "lobby-proto",
+  "containers": {
+    "app": {
+      "image": ":lobby-proto.app.1",
+      "environment": {
+        "NODE_ENV": "production",
+        "DATABASE_URL": "postgresql://lobby_user:lobby_pass@db:5432/lobby_db"
+      },
+      "ports": {
+        "3000": "HTTP"
+      }
+    },
+    "db": {
+      "image": "postgres:15-alpine",
+      "environment": {
+        "POSTGRES_DB": "lobby_db",
+        "POSTGRES_USER": "lobby_user", 
+        "POSTGRES_PASSWORD": "lobby_pass"
+      }
+    }
+  },
+  "publicEndpoint": {
+    "containerName": "app",
+    "containerPort": 3000,
+    "healthCheck": {
+      "healthyThreshold": 2,
+      "unhealthyThreshold": 2,
+      "timeoutSeconds": 5,
+      "intervalSeconds": 30,
+      "path": "/api/health",
+      "successCodes": "200-499"
+    }
+  }
+}

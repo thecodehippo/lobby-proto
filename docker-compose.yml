@@ -1,0 +1,28 @@
+version: '3.8'
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=postgresql://lobby_user:lobby_pass@db:5432/lobby_db
+    depends_on:
+      - db
+    volumes:
+      - ./lobby_data.sql:/app/lobby_data.sql
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=lobby_db
+      - POSTGRES_USER=lobby_user
+      - POSTGRES_PASSWORD=lobby_pass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+volumes:
+  postgres_data:

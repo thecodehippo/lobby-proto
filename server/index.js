@@ -15,9 +15,14 @@ const app = express()
 app.use(cors())
 app.use(express.json({ limit: '1mb' }))
 
+// Serve static files in production
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, '../dist')))
+}
+
 // Define ENV VARS ONCE (no redeclare)
 const DATABASE_URL = process.env.DATABASE_URL
-const PORT = process.env.PORT ? Number(process.env.PORT) : 4000
+const PORT = process.env.PORT ? Number(process.env.PORT) : 3000
 
 if (!DATABASE_URL) {
   console.error('Missing DATABASE_URL in server/.env')
@@ -37,34 +42,7 @@ async function ensureTable() {
         updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
     `)
-    const { rows } = await client.query(`SELECT COUNT(*)::int AS n FROM cms_state WHERE id = 1`)
-    if (!rows[0] || rows[0].n === 0) {
-      await client.query(
-        `INSERT INTO cms_state (id, state) VALUES (1, $1)`,
-        [{
-          brands: [{
-            id: 'bwincom',
-            name: 'bwincom',
-            locales: ['en-GB'],
-            categories: [{
-              id: 'cat-home',
-              parent_id: null,
-              order: 0,
-              slug: { 'en-GB': '' },
-              displayed_in_nav: true,
-              template: 'standard',
-              is_home: true,
-              is_root: true,
-              nav_label: { 'en-GB': 'Home' },
-              nav_icon: '',
-              new_games_count: false,
-              type: 'category',
-              url: '',
-            }],
-          }],
-        }]
-      )
-    }
+    // No seed data - data comes from SQL import or CMS usage
   } finally {
     client.release()
   }
@@ -117,6 +95,13 @@ app.put('/api/cms', async (req, res) => {
     res.status(500).json({ error: e.message || 'Failed to save CMS state' })
   }
 })
+
+// Catch-all handler for SPA in production
+if (process.env.NODE_ENV === 'production') {
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../dist/index.html'))
+  })
+}
 
 ensureTable()
   .then(() => {

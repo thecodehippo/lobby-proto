@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useCms } from "./CmsContext.jsx";
 import { CATEGORY_TEMPLATES, TEMPLATE_KEYS } from "./templates.js";
 import Icon from "@/shared/Icon.jsx";
+import TargetingEditor from "./TargetingEditor.jsx";
 
 const DEFAULT_TEMPLATE =
   (TEMPLATE_KEYS && TEMPLATE_KEYS.STANDARD) ||
@@ -77,8 +78,19 @@ export default function GlobalCategoryEditor() {
       new_games_count: !!current.new_games_count,
       type: current.type || "category",
       url: current.url || "",
-      slug: ensureKeys(current.slug, locs),
-      nav_label: ensureKeys(current.nav_label, locs),
+      slug: { "en-gb": "", "de-at": "", ...(current.slug || {}) },
+      nav_label: {
+        "en-gb": current.nav_label?.["en-gb"] || "Global",
+        "de-at": current.nav_label?.["de-at"] || "Global",
+        ...(current.nav_label || {}),
+      },
+      targeting: {
+        devices: current.targeting?.devices || ["mobile", "desktop"],
+        countries: current.targeting?.countries || ["UK", "Ireland", "Austria", "Canada", "Ontario", "France"],
+        segment: current.targeting?.segment || null,
+        internal_only: !!current.targeting?.internal_only,
+        player_ids: current.targeting?.player_ids || [],
+      },
     });
   }, [current?.id, locs.join("|")]);
 
@@ -103,8 +115,9 @@ export default function GlobalCategoryEditor() {
       new_games_count: !!form.new_games_count,
       type: form.type || "category",
       url: form.url || "",
-      slug: ensureKeys(form.slug, locs),
-      nav_label: ensureKeys(form.nav_label, locs),
+      slug: { ...(form.slug || {}) },
+      nav_label: { ...(form.nav_label || {}) },
+      targeting: form.targeting,
     };
     actions.updateGlobalCategory(current.id, payload);
   };
@@ -226,6 +239,12 @@ export default function GlobalCategoryEditor() {
           />
         </div>
       </div>
+
+      <TargetingEditor
+        targeting={form.targeting}
+        onChange={(targeting) => onChange({ targeting })}
+        disabled={false}
+      />
 
       <div style={styles.section}>Translations</div>
       {locs.map((loc) => (
