@@ -1,66 +1,94 @@
 // src/cms/CmsApp.jsx
 import React from "react";
 import { useCms } from "./CmsContext.jsx";
+
 import Sidebar from "./Sidebar.jsx";
 import BrandEditor from "./BrandEditor.jsx";
 import CategoryEditor from "./CategoryEditor.jsx";
 import SubcategoryEditor from "./SubcategoryEditor.jsx";
+
+// Global editors & settings
+import GlobalSettings from "./GlobalSettings.jsx";
 import GlobalCategoryEditor from "./GlobalCategoryEditor.jsx";
 import GlobalSubcategoryEditor from "./GlobalSubcategoryEditor.jsx";
 
 export default function CmsApp() {
   const { loading, selection } = useCms();
 
+  const renderPanel = () => {
+    if (loading) {
+      return <div style={styles.emptyPanel}>Loading CMS…</div>;
+    }
+    if (!selection) {
+      return (
+        <div style={styles.emptyPanel}>
+          Select something from the sidebar to begin.
+        </div>
+      );
+    }
+
+    switch (selection.scope) {
+      // GLOBAL area
+      case "global":
+        return <GlobalSettings />;
+
+      // Global category and subcategory editors
+      case "g-category":
+        return <GlobalCategoryEditor />;
+
+      case "g-subcategory":
+        return <GlobalSubcategoryEditor />;
+
+      // BRAND area
+      case "brand":
+        return <BrandEditor />;
+
+      case "category":
+        return <CategoryEditor />;
+
+      case "subcategory":
+        return <SubcategoryEditor />;
+
+      default:
+        return (
+          <div style={styles.emptyPanel}>
+            Unknown selection type: <code>{String(selection.scope)}</code>
+          </div>
+        );
+    }
+  };
+
   return (
-    <div style={styles.wrap}>
-      <aside style={styles.sidebar}>
+    <div style={styles.shell}>
+      <aside style={styles.leftCol}>
         <Sidebar />
       </aside>
-      <main style={styles.main}>
-        {loading ? (
-          <div style={styles.loading}>Loading…</div>
-        ) : (
-          <EditorSwitch scope={selection?.scope} />
-        )}
-      </main>
+      <main style={styles.rightCol}>{renderPanel()}</main>
     </div>
   );
 }
 
-function EditorSwitch({ scope }) {
-  switch (scope) {
-    case "brand":
-      return <BrandEditor />;
-    case "category":
-      return <CategoryEditor />;
-    case "subcategory":
-      return <SubcategoryEditor />;
-    case "g-category":
-      return <GlobalCategoryEditor />;
-    case "g-subcategory":
-      return <GlobalSubcategoryEditor />;
-    case "global":
-    default:
-      return (
-        <div style={{ padding: 16, color: "#6b7280" }}>
-          Select something from the left to edit.
-        </div>
-      );
-  }
-}
+/* ---------------- styles ---------------- */
 
 const styles = {
-  wrap: {
+  shell: {
     display: "grid",
     gridTemplateColumns: "360px 1fr",
     minHeight: "100vh",
     background: "#fff",
   },
-  sidebar: {
+  leftCol: {
     borderRight: "1px solid #e5e7eb",
-    minWidth: 0,
+    background: "#fafafa",
     overflow: "hidden",
   },
-  main: { minWidth: 0, overflow: "auto" },
-  loading: { padding: 16, color: "#6b7280" },
+  rightCol: {
+    minWidth: 0,
+    overflow: "auto",
+    background: "#fff",
+  },
+  emptyPanel: {
+    padding: 16,
+    color: "#6b7280",
+  },
 };

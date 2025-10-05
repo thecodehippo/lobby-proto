@@ -25,44 +25,66 @@ export default function LobbyApp() {
   );
 }
 
+/** "/" -> first locale of first brand */
 function NavigateToDefault() {
   const { brands } = useCms();
   const navigate = useNavigate();
   React.useEffect(() => {
     const b = brands[0];
-    const defaultLocale = b?.locales?.[0] || "en-GB";
-    navigate(`/${encodeURIComponent(defaultLocale)}`, { replace: true });
+    const firstLocale = b?.locales?.[0] || "en-GB";
+    navigate(`/${encodeURIComponent(firstLocale)}`, { replace: true });
   }, [brands, navigate]);
   return null;
 }
 
+/** "/:locale" -> home parent if any, else first parent (by order) */
 function NavigateToHome() {
-  const { brands, resolveCategory } = useCms();
+  const { brands, resolveCategory, loading } = useCms();
   const { locale } = useParams();
   const navigate = useNavigate();
+
   React.useEffect(() => {
+    if (loading) return; // 🔑 wait for data
     const b = brands[0];
     if (!b) return;
-    const home = (b.categories || []).find((c) => c.is_home);
-    if (!home) return;
-    const eff = resolveCategory(b.id, home.id) || home;
-    const slug =
+
+    const cats = b.categories || [];
+    if (!cats.length) return;
+
+    // All parents (root categories), ordered
+    const roots = cats
+      .filter((c) => c.parent_id == null)
+      .sort((a, z) => (a.order || 0) - (z.order || 0));
+
+    // Home among parents (if multiple flagged, first by order wins)
+    const homeRoot = roots.find((c) => c.is_home) || null;
+
+    // Fallback: first parent by order
+    const target = homeRoot || roots[0] || null;
+    if (!target) return;
+
+    const lower = String(locale).toLowerCase();
+    const eff = resolveCategory(b.id, target.id) || target;
+    const slugCandidate =
       eff.slug?.[locale] ||
-      eff.slug?.[String(locale).toLowerCase()] ||
-      home.slug?.[locale] ||
-      home.slug?.[String(locale).toLowerCase()] ||
-      home.id;
+      eff.slug?.[lower] ||
+      target.slug?.[locale] ||
+      target.slug?.[lower] ||
+      "";
+    const slug = String(slugCandidate).trim() || target.id;
+
     navigate(`/${encodeURIComponent(locale)}/${encodeURIComponent(slug)}`, {
       replace: true,
     });
-  }, [brands, locale, navigate, resolveCategory]);
+  }, [brands, locale, navigate, resolveCategory, loading]);
+
   return null;
 }
 
 function CategoryPage() {
-  const { brands, resolveCategory } = useCms();
+  const { brands, resolveCategory, loading } = useCms();
   const { locale, categorySlug, subcatSlug } = useParams();
-  const brand = brands[0]; // bwincom for now
+  const brand = brands[0];
 
   const {
     category, // brand-local matched category
@@ -71,7 +93,7 @@ function CategoryPage() {
     subnavItems,
     allRootCats,
     subcategoriesForCategory,
-    selectedSubcategory, // when subcat route present
+    selectedSubcategory,
   } = useMemo(() => {
     if (!brand) {
       return {
@@ -88,15 +110,7 @@ function CategoryPage() {
     const cats = brand.categories || [];
     const lower = String(locale).toLowerCase();
 
-    // helper: effective label/slug (tries exact locale then lowercase)
-    const slugFor = (effCat) =>
-      effCat?.slug?.[locale] ||
-      effCat?.slug?.[lower] ||
-      // fallback to brand-local slug if eff not present
-      effCat?.slug?.[locale] ||
-      effCat?.slug?.[lower];
-
-    // Find category by matching against EFFECTIVE slug for this locale (case-insens), then by id
+    // find by effective slug (case-insensitive) then by id
     const findCategoryBySlugOrId = (slugVal) => {
       const target = String(slugVal || "").toLowerCase();
       let hit =
@@ -115,7 +129,6 @@ function CategoryPage() {
 
     const cat = findCategoryBySlugOrId(categorySlug);
     if (!cat) {
-      // not found
       return {
         category: null,
         effCategory: null,
@@ -129,12 +142,12 @@ function CategoryPage() {
 
     const effCat = resolveCategory(brand.id, cat.id) || cat;
 
-    // parent for subnav: if this cat has a parent, subnav shows siblings; else shows children
+    // parent context for subnav: siblings if child; children if parent
     const parent = cat.parent_id
       ? cats.find((c) => c.id === cat.parent_id) || null
       : cat;
 
-    // roots for primary nav (parents only), filtered by effective displayed_in_nav
+    // Primary nav shows root categories that are displayed_in_nav
     const roots = cats
       .filter((c) => c.parent_id == null)
       .filter((c) => {
@@ -143,7 +156,7 @@ function CategoryPage() {
       })
       .sort((a, z) => (a.order || 0) - (z.order || 0));
 
-    // siblings/children for secondary nav, filtered by effective displayed_in_nav
+    // Secondary nav = children of parent (or siblings of current child), filtered by displayed_in_nav
     const siblingsOrChildren = parent
       ? cats
           .filter((c) => c.parent_id === parent.id)
@@ -154,13 +167,13 @@ function CategoryPage() {
           .sort((a, z) => (a.order || 0) - (z.order || 0))
       : [];
 
-    // EFFECTIVE subcategories for the selected category (brand-first, then global; no de-dupe)
+    // Effective subcategories (brand-first, then global)
     const subsForCat = (effCat?.subcategories || []).slice();
 
-    // If subcat route present, find that subcategory by slug (or exact id) within effective subs
+    // Selected subcategory (if on subcat route)
     let selectedSubcat = null;
     if (subcatSlug && subsForCat.length) {
-      const target = String(subcatSlug).toLowerCase();
+      const t = String(subcatSlug).toLowerCase();
       selectedSubcat =
         subsForCat.find((s) => {
           const sSlug =
@@ -168,7 +181,7 @@ function CategoryPage() {
             s.slug?.[lower] ||
             s.slug?.[String(locale)] ||
             "";
-          return String(sSlug).toLowerCase() === target;
+          return String(sSlug).toLowerCase() === t;
         }) ||
         subsForCat.find((s) => s.id === subcatSlug) ||
         null;
@@ -185,14 +198,46 @@ function CategoryPage() {
     };
   }, [brand, locale, categorySlug, subcatSlug, resolveCategory]);
 
+  // If slug is stale/missing, redirect to the same home/first-parent fallback
+  const navigate = useNavigate();
+  React.useEffect(() => {
+    if (loading) return; // 🔑 wait for data
+    if (!brand || category) return;
+
+    const cats = brand.categories || [];
+    if (!cats.length) return;
+
+    // Parents, ordered
+    const roots = cats
+      .filter((c) => c.parent_id == null)
+      .sort((a, z) => (a.order || 0) - (z.order || 0));
+
+    const homeRoot = roots.find((c) => c.is_home) || null;
+    const target = homeRoot || roots[0] || null;
+    if (!target) return;
+
+    const lower = String(locale).toLowerCase();
+    const eff = resolveCategory(brand.id, target.id) || target;
+    const slugCandidate =
+      eff.slug?.[locale] ||
+      eff.slug?.[lower] ||
+      target.slug?.[locale] ||
+      target.slug?.[lower] ||
+      "";
+    const fallbackSlug = String(slugCandidate).trim() || target.id;
+
+    navigate(
+      `/${encodeURIComponent(locale)}/${encodeURIComponent(fallbackSlug)}`,
+      { replace: true }
+    );
+  }, [brand, category, locale, navigate, resolveCategory, loading]);
+
   if (!brand) return <div style={{ padding: 16 }}>Loading…</div>;
-  if (!category || !effCategory)
-    return <div style={{ padding: 16 }}>Category not found.</div>;
+  if (!category) return null; // redirect in-flight (only after !loading)
 
   const localeSafe = locale;
   const lowerLocale = String(localeSafe).toLowerCase();
 
-  // If subcategory is specified but not found, just show category view (all modules)
   const modulesToShow = selectedSubcategory
     ? [selectedSubcategory]
     : subcategoriesForCategory;
@@ -205,7 +250,7 @@ function CategoryPage() {
         <LocalePicker locales={brand.locales} current={localeSafe} />
       </header>
 
-      {/* Primary nav (root categories shown if effective displayed_in_nav=true) */}
+      {/* Primary nav */}
       <nav style={styles.nav}>
         {allRootCats.map((c) => {
           const eff = resolveCategory(brand.id, c.id) || c;
@@ -215,7 +260,7 @@ function CategoryPage() {
             c.slug?.[localeSafe] ||
             c.slug?.[lowerLocale] ||
             c.id;
-          const active = c.id === category.id || c.id === category.parent_id;
+          const active = c.id === category?.id || c.id === category.parent_id;
           return (
             <Link
               key={c.id}
@@ -238,7 +283,7 @@ function CategoryPage() {
         })}
       </nav>
 
-      {/* Secondary nav persists, tied to parentForSubnav (siblings-of-child or children-of-parent) */}
+      {/* Secondary nav */}
       {parentForSubnav && subnavItems.length > 0 && (
         <nav style={styles.subnav}>
           {subnavItems.map((c) => {
@@ -273,27 +318,16 @@ function CategoryPage() {
         </nav>
       )}
 
-      {/* Page title (use effective label) */}
+      {/* Title */}
       <div style={styles.titleRow}>
         <h1 style={styles.h1}>
           {effCategory.nav_label?.[localeSafe] ||
             effCategory.nav_label?.[lowerLocale] ||
             ""}
-          {selectedSubcategory && (
-            <span style={styles.h1Sub}>
-              {selectedSubcategory.label?.[localeSafe] ||
-              selectedSubcategory.label?.[lowerLocale]
-                ? ` — ${
-                    selectedSubcategory.label?.[localeSafe] ||
-                    selectedSubcategory.label?.[lowerLocale]
-                  }`
-                : ""}
-            </span>
-          )}
         </h1>
       </div>
 
-      {/* Modules (subcategory blocks, from effective list) */}
+      {/* Modules */}
       <section style={styles.modulesWrap}>
         {modulesToShow.map((sc) => {
           const scSlug = sc.slug?.[localeSafe] || sc.slug?.[lowerLocale];
@@ -343,7 +377,6 @@ function LocalePicker({ locales, current }) {
         value={current}
         onChange={(e) => {
           const next = e.target.value;
-          // Keep current category/subcategory slug when switching locale
           if (subcatSlug) {
             navigate(
               `/${encodeURIComponent(next)}/${encodeURIComponent(
@@ -397,7 +430,6 @@ function ModuleBlock({ icon, label, labelSub, type, layout, href, active }) {
         </div>
       </div>
 
-      {/* empty body for now */}
       <div style={styles.moduleBody}>
         <div style={styles.placeholderGrid}>
           <div style={styles.placeholderCard} />
