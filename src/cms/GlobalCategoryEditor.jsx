@@ -22,13 +22,30 @@ function normalizeTemplate(value) {
   return labelHit || DEFAULT_TEMPLATE;
 }
 
+const ensureKeys = (obj, keys) => {
+  const base = { ...(obj || {}) };
+  keys.forEach((k) => {
+    if (!(k in base)) base[k] = "";
+  });
+  return base;
+};
+
 export default function GlobalCategoryEditor() {
-  const { globalCategories, selection, actions } = useCms();
+  const {
+    globalCategories,
+    globalCategorySubcategories,
+    selection,
+    actions,
+    globalLocales,
+  } = useCms();
 
   const current = useMemo(
     () => globalCategories.find((c) => c.id === selection?.id) || null,
     [globalCategories, selection?.id]
   );
+
+  const locs =
+    globalLocales && globalLocales.length ? globalLocales : ["en-gb", "de-at"];
 
   const parentOptions = useMemo(() => {
     if (!current) return [];
@@ -36,6 +53,12 @@ export default function GlobalCategoryEditor() {
       .filter((c) => c.parent_id == null && c.id !== current.id)
       .sort((a, z) => (a.order || 0) - (z.order || 0));
   }, [globalCategories, current]);
+
+  const subs = useMemo(() => {
+    return (globalCategorySubcategories || [])
+      .filter((s) => s.parent_category === current?.id)
+      .sort((a, z) => (a.order || 0) - (z.order || 0));
+  }, [globalCategorySubcategories, current?.id]);
 
   const [form, setForm] = useState(null);
 
@@ -54,14 +77,10 @@ export default function GlobalCategoryEditor() {
       new_games_count: !!current.new_games_count,
       type: current.type || "category",
       url: current.url || "",
-      slug: { "en-gb": "", "de-at": "", ...(current.slug || {}) },
-      nav_label: {
-        "en-gb": current.nav_label?.["en-gb"] || "Global",
-        "de-at": current.nav_label?.["de-at"] || "Global",
-        ...(current.nav_label || {}),
-      },
+      slug: ensureKeys(current.slug, locs),
+      nav_label: ensureKeys(current.nav_label, locs),
     });
-  }, [current?.id]);
+  }, [current?.id, locs.join("|")]);
 
   if (!current || !form) {
     return (
@@ -84,8 +103,8 @@ export default function GlobalCategoryEditor() {
       new_games_count: !!form.new_games_count,
       type: form.type || "category",
       url: form.url || "",
-      slug: { ...(form.slug || {}) },
-      nav_label: { ...(form.nav_label || {}) },
+      slug: ensureKeys(form.slug, locs),
+      nav_label: ensureKeys(form.nav_label, locs),
     };
     actions.updateGlobalCategory(current.id, payload);
   };
@@ -209,7 +228,7 @@ export default function GlobalCategoryEditor() {
       </div>
 
       <div style={styles.section}>Translations</div>
-      {["en-gb", "de-at"].map((loc) => (
+      {locs.map((loc) => (
         <div key={loc} style={styles.localeRow}>
           <div style={{ fontWeight: 600, width: 90 }}>{loc}</div>
           <div style={{ flex: 1 }}>
