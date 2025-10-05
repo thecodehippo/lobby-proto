@@ -1,97 +1,236 @@
 // src/cms/Sidebar.jsx
-import React, { useMemo } from "react";
-import { Globe, Folder, CornerDownRight, List } from "lucide-react";
+import React from "react";
+import {
+  Globe,
+  Folder,
+  FolderOpen,
+  CornerDownRight,
+  List,
+  ChevronRight,
+  ChevronDown,
+  Plus,
+  ArrowUp,
+  ArrowDown,
+} from "lucide-react";
 import { useCms } from "./CmsContext.jsx";
 
 export default function Sidebar() {
   const { brands, selectedBrand, selection, globalSubcategories, actions } =
     useCms();
-  const preventMouseFocus = (e) => e.preventDefault();
 
-  // ---- GLOBAL SECTION ----
-  const GlobalSection = () => (
-    <>
-      <div
-        style={{
-          ...styles.sectionTitle,
-          marginTop: 0,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: 6,
-        }}
-      >
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-          <Globe size={14} /> Global
-        </span>
+  // ---------- helpers to understand tree shape ----------
+  const brandMeta = React.useMemo(() => {
+    // Build fast lookups:
+    // - first child category for each brand & category
+    // - categories grouped by parent
+    const mapFirstChild = new Map(); // key: node id (brand.id or category.id) -> first child category id
+    const childrenByParent = new Map(); // key: category.id -> child list (sorted)
+    const topByBrand = new Map(); // key: brand.id -> sorted top-level categories
+
+    brands.forEach((b) => {
+      const cats = (b.categories || []).slice();
+      const byOrder = (a, z) => (a.order || 0) - (z.order || 0);
+
+      const tops = cats.filter((c) => c.parent_id == null).sort(byOrder);
+      topByBrand.set(b.id, tops);
+
+      // brand -> first top-level category
+      if (tops.length) mapFirstChild.set(b.id, tops[0].id);
+
+      // map category children + first child for each category
+      cats
+        .filter((c) => c.parent_id != null)
+        .forEach((c) => {
+          if (!childrenByParent.has(c.parent_id))
+            childrenByParent.set(c.parent_id, []);
+          childrenByParent.get(c.parent_id).push(c);
+        });
+
+      childrenByParent.forEach((arr, pid) => arr.sort(byOrder));
+      cats.forEach((c) => {
+        const kids = childrenByParent.get(c.id) || [];
+        if (kids.length) mapFirstChild.set(c.id, kids[0].id);
+      });
+    });
+
+    return { mapFirstChild, topByBrand };
+  }, [brands]);
+
+  // ---------- expansion state ----------
+  const [expanded, setExpanded] = React.useState(() => {
+    const s = new Set();
+    if (selectedBrand?.id) s.add(selectedBrand.id);
+    return s;
+  });
+
+  // open/close with "open first child too" behavior
+  const toggle = React.useCallback(
+    (id) => {
+      setExpanded((prev) => {
+        const next = new Set(prev);
+        const willOpen = !next.has(id);
+        if (willOpen) {
+          next.add(id);
+          const firstChild = brandMeta.mapFirstChild.get(id);
+          if (firstChild) next.add(firstChild);
+        } else {
+          next.delete(id);
+        }
+        return next;
+      });
+    },
+    [brandMeta.mapFirstChild]
+  );
+
+  const isOpen = (id) => expanded.has(id);
+
+  // Default expand first path on initial render / when brands first load
+  React.useEffect(() => {
+    if (!brands.length) return;
+    setExpanded((prev) => {
+      if (prev.size > 0) return prev; // don't override user's state
+      const next = new Set(prev);
+      const firstBrand = brands[0];
+      if (!firstBrand) return prev;
+      next.add(firstBrand.id);
+
+      let current = brandMeta.mapFirstChild.get(firstBrand.id);
+      while (current) {
+        if (next.has(current)) break;
+        next.add(current);
+        const nextChild = brandMeta.mapFirstChild.get(current);
+        if (nextChild && !next.has(nextChild)) {
+          current = nextChild;
+        } else {
+          break;
+        }
+      }
+      return next;
+    });
+  }, [brands, brandMeta.mapFirstChild]);
+
+  return (
+    <aside style={styles.sidebar}>
+      {/* GLOBAL */}
+      <div style={styles.sectionHeader}>
+        <div style={styles.sectionLeft}>
+          <Globe size={14} />
+          <span style={styles.sectionTitle}>Global</span>
+        </div>
         <button
-          onMouseDown={preventMouseFocus}
+          onMouseDown={(e) => e.preventDefault()}
           onClick={actions.addGlobalSubcategory}
+          style={styles.smallBtn}
           title="Add global subcategory"
-          style={styles.smallBtnAlt}
         >
-          + Global subcategory
+          <Plus size={12} /> <span className="hide-sm">Global subcategory</span>
         </button>
       </div>
 
-      <ul style={styles.globalList}>
-        {globalSubcategories
+      <ul style={styles.tree}>
+        {(globalSubcategories || [])
           .slice()
           .sort((a, z) => (a.order || 0) - (z.order || 0))
           .map((g) => {
             const active =
               selection.scope === "g-subcategory" && selection.id === g.id;
             return (
-              <li key={g.id}>
+              <li key={g.id} style={styles.row}>
+                <span style={styles.chevStub} />
                 <button
-                  onMouseDown={preventMouseFocus}
+                  onMouseDown={(e) => e.preventDefault()}
                   onClick={() => actions.selectGlobalSubcategory(g.id)}
                   style={{
-                    ...styles.globalBtn,
-                    ...(active ? styles.catBtnSelected : {}),
+                    ...styles.nodeBtn,
+                    ...styles.dashed,
+                    ...(active ? styles.nodeActive : {}),
                   }}
-                  title="Global subcategory"
                 >
-                  {active ? (
-                    <span style={styles.leftAccent} aria-hidden />
-                  ) : null}
-                  <span style={styles.iconWrap}>
+                  <span style={styles.icon}>
                     <List size={14} />
                   </span>
-                  <span style={styles.catName}>{g.name || g.id}</span>
+                  <span style={styles.label}>{g.name || g.id}</span>
                 </button>
               </li>
             );
           })}
       </ul>
-    </>
-  );
 
-  if (!selectedBrand) {
-    return (
-      <aside style={styles.sidebar}>
-        <GlobalSection />
-        <div style={{ ...styles.sectionTitle, marginTop: 12 }}>Brands</div>
-        <ul style={styles.brandList}>
-          {brands.map((b) => (
-            <li key={b.id}>
-              <button
-                onMouseDown={preventMouseFocus}
-                style={styles.brandBtn}
-                onClick={() => actions.selectBrand(b.id)}
-              >
-                {b.name}
-              </button>
+      {/* CONTENT / BRANDS */}
+      <div style={{ ...styles.sectionHeader, marginTop: 10 }}>
+        <div style={styles.sectionLeft}>
+          <span style={styles.sectionTitle}>Content</span>
+        </div>
+      </div>
+
+      <ul style={styles.tree}>
+        {brands.map((brand) => {
+          const open = isOpen(brand.id);
+          const isActive =
+            selectedBrand &&
+            selectedBrand.id === brand.id &&
+            selection.scope === "brand";
+          return (
+            <li key={brand.id}>
+              <div style={styles.row}>
+                <button
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => toggle(brand.id)}
+                  style={styles.chev}
+                  aria-label={open ? "Collapse" : "Expand"}
+                >
+                  {open ? (
+                    <ChevronDown size={14} />
+                  ) : (
+                    <ChevronRight size={14} />
+                  )}
+                </button>
+                <button
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => actions.selectBrand(brand.id)}
+                  style={{
+                    ...styles.nodeBtn,
+                    ...(isActive ? styles.nodeActive : {}),
+                  }}
+                >
+                  <span style={styles.icon}>
+                    {open ? <FolderOpen size={14} /> : <Folder size={14} />}
+                  </span>
+                  <span style={styles.label}>{brand.name}</span>
+                </button>
+                <div style={styles.inline}>
+                  <button
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => actions.addCategory(brand.id)}
+                    style={styles.iconBtn}
+                    title="Add category"
+                  >
+                    <Plus size={14} />
+                  </button>
+                </div>
+              </div>
+
+              {open && (
+                <BrandTree
+                  brand={brand}
+                  selection={selection}
+                  actions={actions}
+                  isOpen={isOpen}
+                  toggle={toggle}
+                />
+              )}
             </li>
-          ))}
-        </ul>
-      </aside>
-    );
-  }
+          );
+        })}
+      </ul>
+    </aside>
+  );
+}
 
-  // Build categories + subcategories map
-  const { parents, childrenByParent, subcatsByCategory } = useMemo(() => {
-    const cats = (selectedBrand.categories || []).slice();
+function BrandTree({ brand, selection, actions, isOpen, toggle }) {
+  const { parents, childrenByParent, subByCat } = React.useMemo(() => {
+    const cats = (brand.categories || []).slice();
+
     const parents = cats
       .filter((c) => c.parent_id == null)
       .sort((a, z) => (a.order || 0) - (z.order || 0));
@@ -109,404 +248,300 @@ export default function Sidebar() {
       arr.sort((a, z) => (a.order || 0) - (z.order || 0))
     );
 
-    const subcatsByCategory = new Map();
-    (selectedBrand.subcategories || []).forEach((s) => {
-      if (!s.parent_category) return;
-      if (!subcatsByCategory.has(s.parent_category))
-        subcatsByCategory.set(s.parent_category, []);
-      subcatsByCategory.get(s.parent_category).push(s);
+    // Robust subcategory grouping (supports multiple parent keys and nested)
+    const getParentCategoryId = (s) =>
+      s.parent_category_id ?? s.parent_id ?? s.parent_category ?? null;
+
+    const subByCat = new Map();
+
+    // brand-level subcategories with parent pointer
+    (brand.subcategories || []).forEach((s) => {
+      const pid = getParentCategoryId(s);
+      if (pid == null) return;
+      if (!subByCat.has(pid)) subByCat.set(pid, []);
+      subByCat.get(pid).push(s);
     });
-    subcatsByCategory.forEach((arr) =>
+
+    // nested subcategories on categories
+    (brand.categories || []).forEach((cat) => {
+      const nested = cat.subcategories || [];
+      if (!nested.length) return;
+      if (!subByCat.has(cat.id)) subByCat.set(cat.id, []);
+      subByCat.get(cat.id).push(...nested);
+    });
+
+    subByCat.forEach((arr) =>
       arr.sort((a, z) => (a.order || 0) - (z.order || 0))
     );
 
-    return { parents, childrenByParent, subcatsByCategory };
-  }, [selectedBrand]);
+    return { parents, childrenByParent, subByCat };
+  }, [brand]);
 
-  const subcatList = (categoryId) => subcatsByCategory.get(categoryId) || [];
-
-  const addSubcategoryFromSidebar = () => {
-    if (!selectedBrand) return;
-    const parentCategoryId =
-      selection.scope === "category" ? selection.id : null;
-    actions.addSubcategory(selectedBrand.id, parentCategoryId);
-  };
+  const subs = (catId) => subByCat.get(catId) || [];
 
   return (
-    <aside style={styles.sidebar}>
-      <GlobalSection />
+    <ul style={{ ...styles.tree, marginLeft: 14 }}>
+      {parents.map((p) => {
+        const open = isOpen(p.id);
+        const active = selection.scope === "category" && selection.id === p.id;
+        const kids = childrenByParent.get(p.id) || [];
+        const subcats = subs(p.id);
 
-      <div style={{ ...styles.sectionTitle, marginTop: 12 }}>Brands</div>
-      <ul style={styles.brandList}>
-        {brands.map((b) => (
-          <li key={b.id}>
-            <button
-              onMouseDown={preventMouseFocus}
-              style={{
-                ...styles.brandBtn,
-                ...(selectedBrand.id === b.id && selection.scope === "brand"
-                  ? styles.brandBtnActive
-                  : {}),
-              }}
-              onClick={() => actions.selectBrand(b.id)}
-            >
-              {b.name}
-            </button>
-          </li>
-        ))}
-      </ul>
-
-      <div
-        style={{
-          ...styles.sectionTitle,
-          marginTop: 12,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: 6,
-        }}
-      >
-        <span>Categories</span>
-        <div style={{ display: "flex", gap: 6 }}>
-          <button
-            onMouseDown={preventMouseFocus}
-            onClick={() => actions.addCategory(selectedBrand.id)}
-            title="Add category"
-            style={styles.smallBtn}
-          >
-            + Category
-          </button>
-          <button
-            onMouseDown={preventMouseFocus}
-            onClick={addSubcategoryFromSidebar}
-            title={
-              selection.scope === "category"
-                ? "Add subcategory (mapped)"
-                : "Add subcategory (unmapped)"
-            }
-            style={styles.smallBtnAlt}
-          >
-            + Subcategory
-          </button>
-        </div>
-      </div>
-
-      <ul style={styles.catList}>
-        {parents.map((p) => {
-          const kids = childrenByParent.get(p.id) || [];
-          const activeParent =
-            selection.scope === "category" && selection.id === p.id;
-          const subcatsOfParent = subcatList(p.id);
-
-          return (
-            <li key={p.id} style={{ marginBottom: 4 }}>
-              {/* Parent row with move controls */}
-              <div style={styles.rowWithMoves}>
+        return (
+          <li key={p.id}>
+            <div style={styles.row}>
+              <button
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => toggle(p.id)}
+                style={styles.chev}
+                aria-label={open ? "Collapse" : "Expand"}
+              >
+                {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              </button>
+              <button
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => actions.selectCategory(brand.id, p.id)}
+                style={{
+                  ...styles.nodeBtn,
+                  ...(active ? styles.nodeActive : {}),
+                }}
+              >
+                <span style={styles.icon}>
+                  <Folder size={14} />
+                </span>
+                <span style={styles.label}>{p.name || p.id}</span>
+              </button>
+              <div style={styles.inline}>
                 <button
-                  onMouseDown={preventMouseFocus}
-                  onClick={() => actions.selectCategory(selectedBrand.id, p.id)}
-                  style={{
-                    ...styles.catBtn,
-                    ...(activeParent ? styles.catBtnSelected : {}),
-                  }}
-                  title="Parent category"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => actions.addSubcategory(brand.id, p.id)}
+                  style={styles.iconBtn}
+                  title="Add subcategory"
                 >
-                  {activeParent ? (
-                    <span style={styles.leftAccent} aria-hidden />
-                  ) : null}
-                  <span style={styles.iconWrap}>
-                    <Folder size={14} />
-                  </span>
-                  <span style={styles.catName}>{p.name || p.id}</span>
-                  {(kids.length > 0 || subcatsOfParent.length > 0) && (
-                    <span style={styles.badge}>
-                      {kids.length + subcatsOfParent.length}
-                    </span>
-                  )}
+                  <List size={14} />
                 </button>
-
-                <div style={styles.moveCol}>
-                  <button
-                    onMouseDown={preventMouseFocus}
-                    onClick={() =>
-                      actions.moveCategoryUp(selectedBrand.id, p.id)
-                    }
-                    style={styles.moveBtn}
-                    title="Move up"
-                  >
-                    ▲
-                  </button>
-                  <button
-                    onMouseDown={preventMouseFocus}
-                    onClick={() =>
-                      actions.moveCategoryDown(selectedBrand.id, p.id)
-                    }
-                    style={styles.moveBtn}
-                    title="Move down"
-                  >
-                    ▼
-                  </button>
-                </div>
+                <button
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => actions.moveCategoryUp(brand.id, p.id)}
+                  style={styles.iconBtn}
+                  title="Move up"
+                >
+                  <ArrowUp size={14} />
+                </button>
+                <button
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => actions.moveCategoryDown(brand.id, p.id)}
+                  style={styles.iconBtn}
+                  title="Move down"
+                >
+                  <ArrowDown size={14} />
+                </button>
               </div>
+            </div>
 
-              {/* Parent's subcategories (only displayed_in_nav) */}
-              {subcatsOfParent.length > 0 && (
-                <ul style={styles.subcatList}>
-                  {subcatsOfParent.map((sc) => {
-                    const active =
-                      selection.scope === "subcategory" &&
-                      selection.id === sc.id;
-                    return (
-                      <li key={sc.id}>
+            {open && (
+              <ul style={{ ...styles.tree, marginLeft: 14 }}>
+                {/* subcategories under parent */}
+                {subcats.map((sc) => {
+                  const scActive =
+                    selection.scope === "subcategory" && selection.id === sc.id;
+                  return (
+                    <li
+                      key={sc.id ?? `${p.id}-sc-${sc.slug || sc.name}`}
+                      style={styles.row}
+                    >
+                      <span style={styles.chevStub} />
+                      <button
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() =>
+                          actions.selectSubcategory(brand.id, sc.id)
+                        }
+                        style={{
+                          ...styles.nodeBtn,
+                          ...styles.dashed,
+                          ...(scActive ? styles.nodeActive : {}),
+                        }}
+                      >
+                        <span style={styles.icon}>
+                          <List size={14} />
+                        </span>
+                        <span style={styles.label}>
+                          {sc.name ?? sc.title ?? sc.subcategory_name ?? sc.id}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+
+                {/* child categories */}
+                {kids.map((c) => {
+                  const cOpen = isOpen(c.id);
+                  const cActive =
+                    selection.scope === "category" && selection.id === c.id;
+                  const subC = subs(c.id);
+
+                  return (
+                    <li key={c.id}>
+                      <div style={styles.row}>
                         <button
-                          onMouseDown={preventMouseFocus}
-                          onClick={() =>
-                            actions.selectSubcategory(selectedBrand.id, sc.id)
-                          }
-                          style={{
-                            ...styles.subcatBtn,
-                            ...(active ? styles.catBtnSelected : {}),
-                          }}
-                          title="Subcategory"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => toggle(c.id)}
+                          style={styles.chev}
+                          aria-label={cOpen ? "Collapse" : "Expand"}
                         >
-                          {active ? (
-                            <span style={styles.leftAccent} aria-hidden />
-                          ) : null}
-                          <span style={styles.iconWrap}>
-                            <List size={14} />
-                          </span>
-                          <span style={styles.catName}>
-                            {sc.subcategory_name || sc.id}
-                          </span>
+                          {cOpen ? (
+                            <ChevronDown size={14} />
+                          ) : (
+                            <ChevronRight size={14} />
+                          )}
                         </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-
-              {/* Child categories + their subcategories */}
-              {kids.length > 0 && (
-                <ul style={styles.childList}>
-                  {kids.map((c) => {
-                    const activeChild =
-                      selection.scope === "category" && selection.id === c.id;
-                    const subcatsOfChild = subcatList(c.id);
-
-                    return (
-                      <li key={c.id} style={{ marginBottom: 2 }}>
-                        <div style={styles.rowWithMoves}>
+                        <button
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => actions.selectCategory(brand.id, c.id)}
+                          style={{
+                            ...styles.nodeBtn,
+                            ...(cActive ? styles.nodeActive : {}),
+                          }}
+                        >
+                          <span style={styles.icon}>
+                            <CornerDownRight size={14} />
+                          </span>
+                          <span style={styles.label}>{c.name || c.id}</span>
+                        </button>
+                        <div style={styles.inline}>
                           <button
-                            onMouseDown={preventMouseFocus}
+                            onMouseDown={(e) => e.preventDefault()}
                             onClick={() =>
-                              actions.selectCategory(selectedBrand.id, c.id)
+                              actions.addSubcategory(brand.id, c.id)
                             }
-                            style={{
-                              ...styles.catBtn,
-                              ...styles.childIndent,
-                              ...(activeChild ? styles.catBtnSelected : {}),
-                              ...(c.displayed_in_nav ? {} : styles.dim),
-                            }}
-                            title={`Child of ${p.name || p.id}`}
+                            style={styles.iconBtn}
+                            title="Add subcategory"
                           >
-                            {activeChild ? (
-                              <span style={styles.leftAccent} aria-hidden />
-                            ) : null}
-                            <span style={styles.iconWrap}>
-                              <CornerDownRight size={14} />
-                            </span>
-                            <span style={styles.catName}>{c.name || c.id}</span>
-                            {subcatsOfChild.length > 0 && (
-                              <span style={styles.badge}>
-                                {subcatsOfChild.length}
-                              </span>
-                            )}
+                            <List size={14} />
                           </button>
-
-                          <div style={styles.moveCol}>
-                            <button
-                              onMouseDown={preventMouseFocus}
-                              onClick={() =>
-                                actions.moveCategoryUp(selectedBrand.id, c.id)
-                              }
-                              style={styles.moveBtn}
-                              title="Move up"
-                            >
-                              ▲
-                            </button>
-                            <button
-                              onMouseDown={preventMouseFocus}
-                              onClick={() =>
-                                actions.moveCategoryDown(selectedBrand.id, c.id)
-                              }
-                              style={styles.moveBtn}
-                              title="Move down"
-                            >
-                              ▼
-                            </button>
-                          </div>
+                          <button
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() =>
+                              actions.moveCategoryUp(brand.id, c.id)
+                            }
+                            style={styles.iconBtn}
+                            title="Move up"
+                          >
+                            <ArrowUp size={14} />
+                          </button>
+                          <button
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() =>
+                              actions.moveCategoryDown(brand.id, c.id)
+                            }
+                            style={styles.iconBtn}
+                            title="Move down"
+                          >
+                            <ArrowDown size={14} />
+                          </button>
                         </div>
+                      </div>
 
-                        {subcatsOfChild.length > 0 && (
-                          <ul style={styles.subcatList}>
-                            {subcatsOfChild.map((sc) => {
-                              const active =
-                                selection.scope === "subcategory" &&
-                                selection.id === sc.id;
-                              return (
-                                <li key={sc.id}>
-                                  <button
-                                    onMouseDown={preventMouseFocus}
-                                    onClick={() =>
-                                      actions.selectSubcategory(
-                                        selectedBrand.id,
-                                        sc.id
-                                      )
-                                    }
-                                    style={{
-                                      ...styles.subcatBtn,
-                                      ...(active ? styles.catBtnSelected : {}),
-                                    }}
-                                    title="Subcategory"
-                                  >
-                                    {active ? (
-                                      <span
-                                        style={styles.leftAccent}
-                                        aria-hidden
-                                      />
-                                    ) : null}
-                                    <span style={styles.iconWrap}>
-                                      <List size={14} />
-                                    </span>
-                                    <span style={styles.catName}>
-                                      {sc.subcategory_name || sc.id}
-                                    </span>
-                                  </button>
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </li>
-          );
-        })}
-      </ul>
-    </aside>
+                      {cOpen && (
+                        <ul style={{ ...styles.tree, marginLeft: 14 }}>
+                          {subC.map((sc) => {
+                            const scActive =
+                              selection.scope === "subcategory" &&
+                              selection.id === sc.id;
+                            return (
+                              <li
+                                key={
+                                  sc.id ?? `${c.id}-sc-${sc.slug || sc.name}`
+                                }
+                                style={styles.row}
+                              >
+                                <span style={styles.chevStub} />
+                                <button
+                                  onMouseDown={(e) => e.preventDefault()}
+                                  onClick={() =>
+                                    actions.selectSubcategory(brand.id, sc.id)
+                                  }
+                                  style={{
+                                    ...styles.nodeBtn,
+                                    ...styles.dashed,
+                                    ...(scActive ? styles.nodeActive : {}),
+                                  }}
+                                >
+                                  <span style={styles.icon}>
+                                    <List size={14} />
+                                  </span>
+                                  <span style={styles.label}>
+                                    {sc.name ??
+                                      sc.title ??
+                                      sc.subcategory_name ??
+                                      sc.id}
+                                  </span>
+                                </button>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
+/* ---------------- styles ---------------- */
+
 const styles = {
   sidebar: {
-    width: 272,
+    width: "100%",
     borderRight: "1px solid #e5e7eb",
     padding: 10,
     background: "#fafafa",
+    overflowY: "auto",
     overflowX: "hidden",
     boxSizing: "border-box",
   },
+
+  sectionHeader: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 6,
+  },
+  sectionLeft: { display: "inline-flex", alignItems: "center", gap: 6 },
   sectionTitle: {
     fontSize: 12,
-    fontWeight: 600,
+    fontWeight: 700,
     color: "#6b7280",
     textTransform: "uppercase",
   },
 
-  smallBtn: {
-    fontSize: 12,
-    padding: "2px 8px",
-    border: "1px solid #e5e7eb",
-    borderRadius: 6,
-    background: "#fff",
-    cursor: "pointer",
-  },
-  smallBtnAlt: {
-    fontSize: 12,
-    padding: "2px 8px",
-    border: "1px solid #d1d5db",
-    borderRadius: 6,
-    background: "#f9fafb",
-    cursor: "pointer",
-  },
-
-  globalList: {
-    listStyle: "none",
-    margin: 8,
-    marginLeft: 0,
-    padding: 0,
+  tree: { listStyle: "none", margin: 0, padding: 0, display: "grid", gap: 2 },
+  row: {
     display: "grid",
-    gap: 4,
-  },
-  globalBtn: {
-    position: "relative",
-    display: "flex",
+    gridTemplateColumns: "18px 1fr auto",
     alignItems: "center",
-    gap: 8,
-    width: "100%",
-    textAlign: "left",
-    borderRadius: 8,
-    padding: "5px 7px",
-    border: "1px dashed #e5e7eb",
-    background: "#fff",
-    cursor: "pointer",
-    boxSizing: "border-box",
-    overflow: "hidden",
-  },
-
-  brandList: {
-    listStyle: "none",
-    margin: 8,
-    marginLeft: 0,
-    padding: 0,
-    display: "grid",
     gap: 6,
   },
-  brandBtn: {
-    display: "block",
-    width: "100%",
-    textAlign: "left",
-    borderRadius: 8,
-    padding: "7px 9px",
-    border: "1px solid #e5e7eb",
-    background: "#fff",
-    cursor: "pointer",
-    boxSizing: "border-box",
-  },
-  brandBtnActive: {
-    background: "#111827",
-    color: "#fff",
-    border: "1px solid #111827",
-  },
 
-  catList: {
-    listStyle: "none",
-    margin: 8,
-    marginLeft: 0,
-    padding: 0,
-    display: "grid",
-    gap: 4,
-  },
-  childList: {
-    listStyle: "none",
-    margin: 4,
-    marginLeft: 16,
-    padding: 0,
-    display: "grid",
-    gap: 4,
-  },
-
-  rowWithMoves: {
-    display: "grid",
-    gridTemplateColumns: "1fr auto",
-    gap: 6,
+  chev: {
+    width: 18,
+    height: 26,
+    display: "inline-flex",
     alignItems: "center",
+    justifyContent: "center",
+    border: 0,
+    background: "transparent",
+    cursor: "pointer",
   },
+  chevStub: { width: 18, height: 26 },
 
-  catBtn: {
+  nodeBtn: {
     position: "relative",
     display: "flex",
     alignItems: "center",
@@ -514,82 +549,50 @@ const styles = {
     width: "100%",
     textAlign: "left",
     borderRadius: 8,
-    padding: "5px 7px",
+    padding: "6px 8px",
     border: "1px solid #e5e7eb",
     background: "#fff",
     cursor: "pointer",
     boxSizing: "border-box",
     overflow: "hidden",
   },
-  subcatList: {
-    listStyle: "none",
-    margin: 4,
-    marginLeft: 16,
-    padding: 0,
-    display: "grid",
-    gap: 4,
-  },
-  subcatBtn: {
-    position: "relative",
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    width: "100%",
-    textAlign: "left",
-    borderRadius: 8,
-    padding: "5px 7px",
-    border: "1px dashed #e5e7eb",
-    background: "#fff",
-    cursor: "pointer",
-    boxSizing: "border-box",
-    overflow: "hidden",
-  },
+  dashed: { borderStyle: "dashed" },
+  nodeActive: { background: "#eef2ff" },
 
-  catBtnSelected: { background: "#eef2ff" },
-  leftAccent: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 3,
-    borderTopLeftRadius: 8,
-    borderBottomLeftRadius: 8,
-    background: "#4f46e5",
-  },
-
-  childIndent: { paddingLeft: 8 },
-  dim: { opacity: 0.7 },
-
-  iconWrap: {
+  icon: {
     width: 16,
     display: "inline-flex",
     justifyContent: "center",
     flex: "0 0 16px",
   },
-  catName: {
+  label: {
     flex: 1,
     minWidth: 0,
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
   },
-  badge: {
-    fontSize: 10,
-    padding: "2px 6px",
-    borderRadius: 999,
-    background: "#e5e7eb",
-    color: "#374151",
-    flex: "0 0 auto",
-  },
 
-  moveCol: { display: "grid", gap: 4 },
-  moveBtn: {
+  inline: { display: "inline-flex", gap: 4, alignItems: "center" },
+  iconBtn: {
     padding: "4px 6px",
-    borderRadius: 6,
     border: "1px solid #e5e7eb",
     background: "#fff",
+    borderRadius: 6,
     cursor: "pointer",
     lineHeight: 1,
+  },
+
+  smallBtn: {
     fontSize: 12,
+    padding: "3px 8px",
+    border: "1px solid #d1d5db",
+    borderRadius: 6,
+    background: "#fff",
+    cursor: "pointer",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 6,
+    whiteSpace: "nowrap",
   },
 };

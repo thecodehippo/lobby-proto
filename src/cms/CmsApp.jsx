@@ -38,7 +38,6 @@ export default function CmsApp() {
       <Sidebar />
 
       <main style={styles.main}>
-        {/* GLOBAL: list is in sidebar; main shows editor when a global subcat is selected */}
         {(selection.scope === "global" ||
           selection.scope === "g-subcategory") && (
           <section style={styles.panel}>
@@ -58,7 +57,6 @@ export default function CmsApp() {
           </section>
         )}
 
-        {/* BRAND */}
         {selection.scope === "brand" && (
           <section style={styles.panel}>
             <header style={styles.header}>
@@ -85,7 +83,6 @@ export default function CmsApp() {
           </section>
         )}
 
-        {/* CATEGORY */}
         {selection.scope === "category" && (
           <section style={styles.panel}>
             <header style={styles.header}>
@@ -110,7 +107,6 @@ export default function CmsApp() {
           </section>
         )}
 
-        {/* BRAND SUBCATEGORY */}
         {selection.scope === "subcategory" && (
           <section style={styles.panel}>
             <header style={styles.header}>
@@ -139,15 +135,17 @@ export default function CmsApp() {
   );
 }
 
+const SIDEBAR_W = 360; // <— adjust this to taste
+
 const styles = {
   appWrap: {
     display: "grid",
-    gridTemplateColumns: "272px 1fr",
+    gridTemplateColumns: `${SIDEBAR_W}px 1fr`, // was 272px 1fr
     minHeight: "100vh",
     background: "#fff",
   },
   sidebarSkeleton: {
-    width: 272,
+    width: SIDEBAR_W, // keep skeleton in sync
     borderRight: "1px solid #e5e7eb",
     background: "#fafafa",
   },
