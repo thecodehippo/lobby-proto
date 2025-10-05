@@ -74,9 +74,13 @@ export default function Sidebar() {
     <aside style={styles.sidebar}>
       {/* GLOBAL CATEGORIES */}
       <div style={styles.sectionHeader}>
-        <div style={styles.sectionLeft}>
+        <div
+          style={{ ...styles.sectionLeft, cursor: "pointer" }}
+          onClick={actions.selectGlobal}
+          title="Global settings"
+        >
           <Globe size={14} />
-          <span style={styles.sectionTitle}>Global Categories</span>
+          <span style={styles.sectionTitle}>Global</span>
         </div>
         <button
           onMouseDown={(e) => e.preventDefault()}

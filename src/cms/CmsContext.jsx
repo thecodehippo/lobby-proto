@@ -9,6 +9,8 @@ import React, {
 } from "react";
 import { CATEGORY_TEMPLATES, TEMPLATE_KEYS } from "./templates.js";
 
+/* ---------------- utils ---------------- */
+
 const DEFAULT_TEMPLATE =
   (TEMPLATE_KEYS && TEMPLATE_KEYS.STANDARD) ||
   CATEGORY_TEMPLATES[CATEGORY_TEMPLATES.length - 1];
@@ -32,30 +34,36 @@ function normalizeTemplate(value) {
 
 // No seed data - all data comes from database/API
 
-// ---------- context ----------
+/* ---------------- context ---------------- */
+
 const CmsCtx = createContext(null);
 export const useCms = () => useContext(CmsCtx);
 
 /**
  * selection.scope:
- * - 'global'         (global list)
- * - 'g-category'     (a global category selected)          id
- * - 'g-subcategory'  (a global subcategory selected)       id
- * - 'brand'          (brand selected)                      id
- * - 'category'       (brand category selected)             brandId, id
- * - 'subcategory'    (brand subcategory selected)          brandId, id
+ * - 'global'            (global settings)
+ * - 'g-category'        (a global category)            id
+ * - 'g-subcategory'     (a global subcategory)         id
+ * - 'brand'             (brand selected)               id
+ * - 'category'          (brand category selected)      brandId, id
+ * - 'subcategory'       (brand subcategory selected)   brandId, id
  */
+
 export function CmsProvider({ children }) {
   const [brands, setBrands] = useState([]);
 
-  // NEW: Global Categories & Global Subcategories
-  const [globalCategories, setGlobalCategories] = useState([]);
+  // global locales that drive translations for global cats/subcats
+  const [globalLocales, setGlobalLocales] = useState(["en-gb", "de-at"]);
+
+  const [globalCategories, setGlobalCategories] = useState([]); // array of global categories
   const [globalCategorySubcategories, setGlobalCategorySubcategories] =
-    useState([]);
+    useState([]); // array of global subcategories (each has parent_category = global category id)
 
   const [loading, setLoading] = useState(true);
+
   const [selection, setSelection] = useState({ scope: "brand", id: "bwincom" });
 
+  /* ---- derived ---- */
   const selectedBrand = useMemo(() => {
     if (selection.scope === "brand") {
       return brands.find((b) => b.id === selection.id) || brands[0] || null;
@@ -68,7 +76,7 @@ export function CmsProvider({ children }) {
     return brands[0] || null;
   }, [brands, selection]);
 
-  // ---------- load ----------
+  /* ---- load ---- */
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -76,32 +84,40 @@ export function CmsProvider({ children }) {
         const res = await fetch("/api/cms");
         if (!res.ok) throw new Error(await res.text());
         const payload = await res.json();
-        const state = payload?.state;
+        const state = payload?.state || {};
 
-        if (mounted) {
-          if (state?.brands) {
-            setBrands(normalizeLoadedBrands(state.brands));
-          }
-          // Load globals (new shape). Backwards compat: tolerate older keys.
-          const loadedGlobalCats = normalizeLoadedGlobalCategories(
-            state?.globalCategories || state?.global?.categories || []
-          );
-          const loadedGlobalSubs = normalizeLoadedGlobalSubcategories(
-            state?.globalCategorySubcategories ||
-              state?.global?.subcategories ||
-              []
-          );
-          setGlobalCategories(loadedGlobalCats);
-          setGlobalCategorySubcategories(loadedGlobalSubs);
+        if (!mounted) return;
 
-          // keep selection sane
-          if (state?.brands?.length) {
-            setSelection((sel) => {
-              const have =
-                state.brands.find((b) => b.id === sel.id) || state.brands[0];
-              return have ? sel : { scope: "brand", id: state.brands[0]?.id };
-            });
-          }
+        if (Array.isArray(state.brands)) {
+          setBrands(normalizeLoadedBrands(state.brands));
+        }
+        if (Array.isArray(state.globalCategories)) {
+          setGlobalCategories(
+            normalizeLoadedGlobalCategories(state.globalCategories)
+          );
+        }
+        if (Array.isArray(state.globalCategorySubcategories)) {
+          setGlobalCategorySubcategories(
+            normalizeLoadedGlobalSubcategories(
+              state.globalCategorySubcategories
+            )
+          );
+        }
+        if (Array.isArray(state.globalLocales) && state.globalLocales.length) {
+          setGlobalLocales(
+            Array.from(
+              new Set(state.globalLocales.map((l) => String(l).toLowerCase()))
+            )
+          );
+        }
+
+        // sane selection
+        if (state?.brands?.length) {
+          setSelection((sel) => {
+            const have =
+              state.brands.find((b) => b.id === sel.id) || state.brands[0];
+            return have ? sel : { scope: "brand", id: state.brands[0]?.id };
+          });
         }
       } catch (e) {
         console.warn("[cms] load failed, using seed:", e.message);
@@ -114,12 +130,13 @@ export function CmsProvider({ children }) {
     };
   }, []);
 
-  // ---------- persist (whole CMS state) ----------
+  /* ---- persist (whole CMS blob) ---- */
   const writeTicket = useRef(0);
   const persistAll = async (
-    nextBrands,
-    nextGlobalCategories,
-    nextGlobalSubs
+    nextBrands = brands,
+    nextGlobalCats = globalCategories,
+    nextGlobalSubs = globalCategorySubcategories,
+    nextGlobalLocales = globalLocales
   ) => {
     const t = ++writeTicket.current;
     try {
@@ -129,8 +146,9 @@ export function CmsProvider({ children }) {
         body: JSON.stringify({
           state: {
             brands: nextBrands,
-            globalCategories: nextGlobalCategories,
+            globalCategories: nextGlobalCats,
             globalCategorySubcategories: nextGlobalSubs,
+            globalLocales: nextGlobalLocales,
           },
         }),
       });
@@ -140,18 +158,18 @@ export function CmsProvider({ children }) {
       if (t !== writeTicket.current) return;
     }
   };
-  const persist = (nextBrands) =>
-    persistAll(nextBrands, globalCategories, globalCategorySubcategories);
-  const persistGlobals = (nextCats, nextSubs) =>
-    persistAll(
-      brands,
-      nextCats ?? globalCategories,
-      nextSubs ?? globalCategorySubcategories
-    );
 
-  // ---------- normalization ----------
+  const persist = (nextBrands) =>
+    persistAll(nextBrands, undefined, undefined, undefined);
+  const persistGlobals = (nextGlobalCats, nextGlobalSubs) =>
+    persistAll(undefined, nextGlobalCats, nextGlobalSubs, undefined);
+  const persistLocales = (nextGlobalLocales) =>
+    persistAll(undefined, undefined, undefined, nextGlobalLocales);
+
+  /* ---- normalization ---- */
+
   function normalizeLoadedBrands(rawBrands) {
-    const cloned = deepClone(rawBrands || []);
+    const cloned = deepClone(rawBrands);
     cloned.forEach((b) => {
       b.locales = Array.isArray(b.locales) ? b.locales : [];
       b.categories = (b.categories || []).map((c) => ({
@@ -185,15 +203,11 @@ export function CmsProvider({ children }) {
         parent_category: sc.parent_category || null, // brand category id
         displayed_in_nav: !!sc.displayed_in_nav,
         order: sc.order ?? 0,
-
-        // content source / config
-        global_subcategory: sc.global_subcategory || null, // (legacy; unused now)
+        // content/config
         type: sc.type || "Game List",
         layout_type: sc.layout_type || "Carousel",
-
         // presentational
         icon: sc.icon || "",
-
         // translatables (brand locales)
         slug: { ...(sc.slug || {}) },
         label: { ...(sc.label || {}) },
@@ -241,39 +255,29 @@ export function CmsProvider({ children }) {
   }
 
   function normalizeLoadedGlobalSubcategories(raw) {
-    const arr = deepClone(raw || []);
-    return arr.map((s) => {
-      const slug = { ...(s.slug || {}) };
-      const label = { ...(s.label || {}) };
-      const label_sub = { ...(s.label_sub || {}) };
-      slug["en-gb"] = slug["en-gb"] || "";
-      slug["de-at"] = slug["de-at"] || "";
-      label["en-gb"] = label["en-gb"] || "";
-      label["de-at"] = label["de-at"] || "";
-      label_sub["en-gb"] = label_sub["en-gb"] || "";
-      label_sub["de-at"] = label_sub["de-at"] || "";
-      return {
-        id: s.id || uid(),
-        subcategory_name: s.subcategory_name || s.name || "Global subcategory",
-        parent_category: s.parent_category || null, // global category id
-        displayed_in_nav: !!s.displayed_in_nav,
-        order: s.order ?? 0,
-        type: s.type || "Game List",
-        layout_type: s.layout_type || "Carousel",
-        icon: s.icon || "",
-        slug,
-        label,
-        label_sub,
-      };
-    });
+    return (raw || []).map((s) => ({
+      id: s.id || uid(),
+      subcategory_name: s.subcategory_name || s.name || "Global subcategory",
+      parent_category: s.parent_category || null, // global category id
+      displayed_in_nav: !!s.displayed_in_nav,
+      order: s.order ?? 0,
+      type: s.type || "Game List",
+      layout_type: s.layout_type || "Carousel",
+      icon: s.icon || "",
+      slug: { ...(s.slug || {}) },
+      label: { ...(s.label || {}) },
+      label_sub: { ...(s.label_sub || {}) },
+    }));
   }
 
-  // ---------- selection actions ----------
+  /* ---- selection actions ---- */
+
   const selectGlobal = () => setSelection({ scope: "global" });
   const selectGlobalCategory = (id) =>
     setSelection({ scope: "g-category", id });
   const selectGlobalSubcategory = (id) =>
     setSelection({ scope: "g-subcategory", id });
+
   const selectBrand = (brandId) =>
     setSelection({ scope: "brand", id: brandId });
   const selectCategory = (brandId, categoryId) =>
@@ -281,7 +285,18 @@ export function CmsProvider({ children }) {
   const selectSubcategory = (brandId, subcatId) =>
     setSelection({ scope: "subcategory", brandId, id: subcatId });
 
-  // ---------- brand actions ----------
+  /* ---- global locales action ---- */
+
+  const setGlobalLocalesAction = (list) => {
+    const cleaned = Array.from(
+      new Set((list || []).map((l) => String(l).toLowerCase()))
+    );
+    setGlobalLocales(cleaned);
+    persistLocales(cleaned);
+  };
+
+  /* ---- brand actions ---- */
+
   const updateBrand = (brandId, partial) => {
     setBrands((prev) => {
       const next = prev.map((b) =>
@@ -292,7 +307,8 @@ export function CmsProvider({ children }) {
     });
   };
 
-  // ---------- category actions (brand) ----------
+  /* ---- brand category actions ---- */
+
   const addCategory = (brandId) => {
     setBrands((prev) => {
       const next = deepClone(prev);
@@ -333,7 +349,7 @@ export function CmsProvider({ children }) {
     });
   };
 
-  // ---------- category actions ----------
+  // NOTE: clears brand translations when linking to a global category
   const updateCategory = (brandId, categoryId, partial) => {
     setBrands((prev) => {
       const next = deepClone(prev);
@@ -344,19 +360,15 @@ export function CmsProvider({ children }) {
 
       const prevCat = b.categories[idx];
 
-      // did link status change in this update?
       const linkChanged =
         Object.prototype.hasOwnProperty.call(partial, "global_category_id") &&
         partial.global_category_id !== prevCat.global_category_id;
       const nowLinked = linkChanged && !!partial.global_category_id;
 
-      // start merge
       const merged = { ...prevCat, ...partial };
 
-      // structural rule: home must be a parent
       if (merged.is_home) merged.parent_id = null;
 
-      // if parent changed, push to end of new group
       if ("parent_id" in partial && partial.parent_id !== prevCat.parent_id) {
         const newPid = merged.parent_id ?? null;
         const sibs = b.categories.filter(
@@ -367,25 +379,15 @@ export function CmsProvider({ children }) {
           : 0;
       }
 
-      // normalize template if provided
-      if (partial.template !== undefined) {
+      if (partial.template !== undefined)
         merged.template = normalizeTemplate(partial.template);
-      }
 
-      // IMPORTANT: translations
-      // - When linking -> clear brand-local translations so they don't linger.
-      // - When not linking (or normal edits) -> do the usual merge.
       if (nowLinked) {
+        // clear brand-local translations so only global ones are visible while linked
         merged.slug = {};
         merged.nav_label = {};
-        // Optional: also clear brand-local presentational fields when linking.
-        // (kept minimal to avoid surprises)
-        // merged.nav_icon = "";
-        // merged.new_games_count = false;
-        // merged.type = "category";
-        // merged.url = "";
-        // merged.displayed_in_nav = false;
       } else {
+        // normal merge of translatables (avoid clobbering other locales)
         merged.slug = { ...(prevCat.slug || {}), ...(partial.slug || {}) };
         merged.nav_label = {
           ...(prevCat.nav_label || {}),
@@ -420,7 +422,44 @@ export function CmsProvider({ children }) {
     });
   };
 
-  // ---------- brand subcategory actions ----------
+  const moveCategory = (brandId, categoryId, dir /* -1 up, +1 down */) => {
+    setBrands((prev) => {
+      const next = deepClone(prev);
+      const b = next.find((x) => x.id === brandId);
+      if (!b) return prev;
+      const list = b.categories || [];
+      const idx = list.findIndex((c) => c.id === categoryId);
+      if (idx === -1) return prev;
+
+      const target = list[idx];
+      const groupKey = target.parent_id ?? null;
+
+      const group = list
+        .filter((c) => (c.parent_id ?? null) === groupKey)
+        .sort((a, z) => (a.order || 0) - (z.order || 0));
+
+      const pos = group.findIndex((c) => c.id === categoryId);
+      const swapWith = group[pos + dir];
+      if (!swapWith) return prev;
+
+      const a = list.find((c) => c.id === target.id);
+      const bCat = list.find((c) => c.id === swapWith.id);
+      const tmp = a.order || 0;
+      a.order = bCat.order || 0;
+      bCat.order = tmp;
+
+      persist(next);
+      return next;
+    });
+  };
+
+  const moveCategoryUp = (brandId, categoryId) =>
+    moveCategory(brandId, categoryId, -1);
+  const moveCategoryDown = (brandId, categoryId) =>
+    moveCategory(brandId, categoryId, +1);
+
+  /* ---- brand subcategory actions ---- */
+
   const addSubcategory = (brandId, parentCategoryId = null) => {
     setBrands((prev) => {
       const next = deepClone(prev);
@@ -432,8 +471,8 @@ export function CmsProvider({ children }) {
         id: uid(),
         subcategory_name: "New subcategory",
         parent_category: parentCategoryId,
-        order: nextOrder,
         displayed_in_nav: true,
+        order: nextOrder,
         type: "Game List",
         layout_type: "Carousel",
         icon: "",
@@ -490,9 +529,7 @@ export function CmsProvider({ children }) {
       const next = deepClone(prev);
       const b = next.find((x) => x.id === brandId);
       if (!b) return prev;
-      const list = b.subcategories;
-      if (!Array.isArray(list)) return prev;
-
+      const list = b.subcategories || [];
       const idx = list.findIndex((s) => s.id === subcatId);
       if (idx === -1) return prev;
       const target = list[idx];
@@ -522,42 +559,6 @@ export function CmsProvider({ children }) {
   const moveSubcategoryDown = (brandId, subcatId) =>
     moveSubcategory(brandId, subcatId, +1);
 
-  // --- Category reordering helpers (brand) ---
-  const moveCategory = (brandId, categoryId, dir /* -1 up, +1 down */) => {
-    setBrands((prev) => {
-      const next = deepClone(prev);
-      const b = next.find((x) => x.id === brandId);
-      if (!b) return prev;
-      const list = b.categories || [];
-      const idx = list.findIndex((c) => c.id === categoryId);
-      if (idx === -1) return prev;
-
-      const target = list[idx];
-      const groupKey = target.parent_id ?? null;
-
-      const group = list
-        .filter((c) => (c.parent_id ?? null) === groupKey)
-        .sort((a, z) => (a.order || 0) - (z.order || 0));
-
-      const pos = group.findIndex((c) => c.id === categoryId);
-      const swapWith = group[pos + dir];
-      if (!swapWith) return prev;
-
-      const a = list.find((c) => c.id === target.id);
-      const bCat = list.find((c) => c.id === swapWith.id);
-      const tmp = a.order || 0;
-      a.order = bCat.order || 0;
-      bCat.order = tmp;
-
-      persist(next);
-      return next;
-    });
-  };
-  const moveCategoryUp = (brandId, categoryId) =>
-    moveCategory(brandId, categoryId, -1);
-  const moveCategoryDown = (brandId, categoryId) =>
-    moveCategory(brandId, categoryId, +1);
-
   const deleteSubcategory = (brandId, subcatId) => {
     setBrands((prev) => {
       const next = deepClone(prev);
@@ -570,23 +571,20 @@ export function CmsProvider({ children }) {
     });
   };
 
-  // ---------- GLOBAL category actions ----------
+  /* ---- GLOBAL category actions ---- */
+
   const addGlobalCategory = (parentId = null) => {
     setGlobalCategories((prev) => {
       const next = deepClone(prev);
-      const sibs = next.filter(
-        (c) => (c.parent_id ?? null) === (parentId ?? null)
-      );
-      const order = sibs.length
-        ? Math.max(...sibs.map((c) => c.order || 0)) + 1
-        : 0;
+      const order =
+        next.filter((c) => (c.parent_id ?? null) === (parentId ?? null))
+          .length +
+        (next.length ? Math.max(...next.map((c) => c.order || 0)) + 1 : 0);
       const gc = {
         id: uid(),
-        name: "New Global Category",
+        name: "Global Category",
         parent_id: parentId ?? null,
-        order,
-        slug: { "en-gb": "", "de-at": "" },
-        nav_label: { "en-gb": "Global", "de-at": "Global" },
+        order: order,
         displayed_in_nav: true,
         template: DEFAULT_TEMPLATE,
         is_home: false,
@@ -603,30 +601,24 @@ export function CmsProvider({ children }) {
         },
       };
       next.push(gc);
-      persistGlobals(next, null);
+      persistGlobals(next, globalCategorySubcategories);
       setSelection({ scope: "g-category", id: gc.id });
       return next;
     });
   };
 
-  const updateGlobalCategory = (gId, partial) => {
+  const updateGlobalCategory = (gCatId, partial) => {
     setGlobalCategories((prev) => {
       const next = deepClone(prev);
-      const idx = next.findIndex((g) => g.id === gId);
+      const idx = next.findIndex((c) => c.id === gCatId);
       if (idx === -1) return prev;
 
-      const prevCat = next[idx];
-      const merged = {
-        ...prevCat,
-        ...partial,
-        slug: { ...(prevCat.slug || {}), ...(partial.slug || {}) },
-        nav_label: {
-          ...(prevCat.nav_label || {}),
-          ...(partial.nav_label || {}),
-        },
-      };
+      const prevC = next[idx];
+      const merged = { ...prevC, ...partial };
 
-      if ("parent_id" in partial && partial.parent_id !== prevCat.parent_id) {
+      if (merged.is_home) merged.parent_id = null;
+
+      if ("parent_id" in partial && partial.parent_id !== prevC.parent_id) {
         const newPid = merged.parent_id ?? null;
         const sibs = next.filter(
           (c) => (c.parent_id ?? null) === newPid && c.id !== merged.id
@@ -639,44 +631,49 @@ export function CmsProvider({ children }) {
       if (partial.template !== undefined)
         merged.template = normalizeTemplate(partial.template);
 
+      // normalize translation keys to globalLocales
+      merged.slug = ensureKeys(
+        { ...(prevC.slug || {}), ...(partial.slug || {}) },
+        globalLocales
+      );
+      merged.nav_label = ensureKeys(
+        { ...(prevC.nav_label || {}), ...(partial.nav_label || {}) },
+        globalLocales
+      );
+
       next[idx] = merged;
-      persistGlobals(next, null);
+      persistGlobals(next, globalCategorySubcategories);
       return next;
     });
   };
 
-  const deleteGlobalCategory = (gId) => {
+  const deleteGlobalCategory = (gCatId) => {
     setGlobalCategories((prevCats) => {
-      let nextCats = deepClone(prevCats);
-      // remove the category
-      const removed = nextCats.find((c) => c.id === gId);
-      nextCats = nextCats
-        .filter((c) => c.id !== gId)
-        .map((c) => (c.parent_id === gId ? { ...c, parent_id: null } : c));
+      const nextCats = deepClone(prevCats).filter((c) => c.id !== gCatId);
+      // Promote children of deleted category to root
+      nextCats.forEach((c) => {
+        if (c.parent_id === gCatId) c.parent_id = null;
+      });
 
-      // move any global subcategories under this category to have no parent
+      // Remove/float subcategories under that global category
       setGlobalCategorySubcategories((prevSubs) => {
-        const nextSubs = prevSubs.map((s) =>
-          s.parent_category === gId ? { ...s, parent_category: null } : s
+        const nextSubs = deepClone(prevSubs).map((s) =>
+          s.parent_category === gCatId ? { ...s, parent_category: null } : s
         );
-        persistGlobals(nextCats, nextSubs);
-        setSelection({ scope: "global" });
+        persistAll(brands, nextCats, nextSubs, globalLocales);
         return nextSubs;
       });
 
-      if (!removed) {
-        persistGlobals(nextCats, globalCategorySubcategories);
-        setSelection({ scope: "global" });
-      }
+      setSelection({ scope: "global" });
       return nextCats;
     });
   };
 
-  const moveGlobalCategory = (gId, dir /* -1 up, +1 down */) => {
+  const moveGlobalCategory = (gCatId, dir /* -1 up, +1 down */) => {
     setGlobalCategories((prev) => {
       const next = deepClone(prev);
       const list = next;
-      const idx = list.findIndex((c) => c.id === gId);
+      const idx = list.findIndex((c) => c.id === gCatId);
       if (idx === -1) return prev;
 
       const target = list[idx];
@@ -686,103 +683,111 @@ export function CmsProvider({ children }) {
         .filter((c) => (c.parent_id ?? null) === groupKey)
         .sort((a, z) => (a.order || 0) - (z.order || 0));
 
-      const pos = group.findIndex((c) => c.id === gId);
+      const pos = group.findIndex((c) => c.id === gCatId);
       const swapWith = group[pos + dir];
       if (!swapWith) return prev;
 
       const a = list.find((c) => c.id === target.id);
-      const b = list.find((c) => c.id === swapWith.id);
+      const bCat = list.find((c) => c.id === swapWith.id);
       const tmp = a.order || 0;
-      a.order = b.order || 0;
-      b.order = tmp;
+      a.order = bCat.order || 0;
+      bCat.order = tmp;
 
-      persistGlobals(next, null);
+      persistGlobals(next, globalCategorySubcategories);
       return next;
     });
   };
-  const moveGlobalCategoryUp = (gId) => moveGlobalCategory(gId, -1);
-  const moveGlobalCategoryDown = (gId) => moveGlobalCategory(gId, +1);
 
-  // ---------- GLOBAL subcategory actions ----------
-  const addGlobalSubcategoryToCategory = (globalCategoryId = null) => {
+  const moveGlobalCategoryUp = (gCatId) => moveGlobalCategory(gCatId, -1);
+  const moveGlobalCategoryDown = (gCatId) => moveGlobalCategory(gCatId, +1);
+
+  /* ---- GLOBAL subcategory actions ---- */
+
+  const addGlobalSubcategoryInCategory = (parentGlobalCategoryId = null) => {
     setGlobalCategorySubcategories((prev) => {
       const next = deepClone(prev);
-      const group = next.filter(
-        (s) => (s.parent_category || null) === (globalCategoryId || null)
-      );
-      const order = group.length
-        ? Math.max(...group.map((g) => g.order || 0)) + 1
-        : 0;
-
+      const order = Math.max(0, ...next.map((s) => s.order || 0)) + 1;
       const sc = {
         id: uid(),
-        subcategory_name: "New global subcategory",
-        parent_category: globalCategoryId || null,
-        order,
+        subcategory_name: "Global subcategory",
+        parent_category: parentGlobalCategoryId,
         displayed_in_nav: true,
+        order,
         type: "Game List",
         layout_type: "Carousel",
         icon: "",
-        slug: { "en-gb": "", "de-at": "" },
-        label: { "en-gb": "", "de-at": "" },
-        label_sub: { "en-gb": "", "de-at": "" },
+        slug: ensureKeys({}, globalLocales),
+        label: ensureKeys({}, globalLocales),
+        label_sub: ensureKeys({}, globalLocales),
       };
       next.push(sc);
-      persistGlobals(null, next);
+      persistGlobals(globalCategories, next);
       setSelection({ scope: "g-subcategory", id: sc.id });
       return next;
     });
   };
 
-  const updateGlobalSubcategoryInCategory = (subcatId, partial) => {
+  const updateGlobalSubcategoryInCategory = (gSubId, partial) => {
     setGlobalCategorySubcategories((prev) => {
       const next = deepClone(prev);
-      const idx = next.findIndex((s) => s.id === subcatId);
+      const idx = next.findIndex((s) => s.id === gSubId);
       if (idx === -1) return prev;
 
       const prevS = next[idx];
       const merged = {
         ...prevS,
         ...partial,
-        slug: { ...(prevS.slug || {}), ...(partial.slug || {}) },
-        label: { ...(prevS.label || {}), ...(partial.label || {}) },
-        label_sub: { ...(prevS.label_sub || {}), ...(partial.label_sub || {}) },
+        slug: ensureKeys(
+          { ...(prevS.slug || {}), ...(partial.slug || {}) },
+          globalLocales
+        ),
+        label: ensureKeys(
+          { ...(prevS.label || {}), ...(partial.label || {}) },
+          globalLocales
+        ),
+        label_sub: ensureKeys(
+          { ...(prevS.label_sub || {}), ...(partial.label_sub || {}) },
+          globalLocales
+        ),
       };
 
       if (
         "parent_category" in partial &&
         partial.parent_category !== prevS.parent_category
       ) {
-        const newGroup = next.filter(
+        const group = next.filter(
           (s) =>
             (s.parent_category || null) === (merged.parent_category || null) &&
             s.id !== merged.id
         );
-        merged.order = newGroup.length
-          ? Math.max(...newGroup.map((s) => s.order || 0)) + 1
+        merged.order = group.length
+          ? Math.max(...group.map((s) => s.order || 0)) + 1
           : 0;
       }
 
       next[idx] = merged;
-      persistGlobals(null, next);
+      persistGlobals(globalCategories, next);
       return next;
     });
   };
 
-  const deleteGlobalSubcategoryInCategory = (subcatId) => {
+  const deleteGlobalSubcategoryInCategory = (gSubId) => {
     setGlobalCategorySubcategories((prev) => {
-      const next = prev.filter((s) => s.id !== subcatId);
-      persistGlobals(null, next);
+      const next = prev.filter((s) => s.id !== gSubId);
+      persistGlobals(globalCategories, next);
       setSelection({ scope: "global" });
       return next;
     });
   };
 
-  const moveGlobalSubcategoryInCategory = (subcatId, dir /* -1 / +1 */) => {
+  const moveGlobalSubcategoryInCategory = (
+    gSubId,
+    dir /* -1 up, +1 down */
+  ) => {
     setGlobalCategorySubcategories((prev) => {
       const next = deepClone(prev);
       const list = next;
-      const idx = list.findIndex((s) => s.id === subcatId);
+      const idx = list.findIndex((s) => s.id === gSubId);
       if (idx === -1) return prev;
       const target = list[idx];
       const groupKey = target.parent_category || null;
@@ -791,31 +796,34 @@ export function CmsProvider({ children }) {
         .filter((s) => (s.parent_category || null) === groupKey)
         .sort((a, z) => (a.order || 0) - (z.order || 0));
 
-      const pos = group.findIndex((s) => s.id === subcatId);
+      const pos = group.findIndex((s) => s.id === gSubId);
       const swapWith = group[pos + dir];
       if (!swapWith) return prev;
 
       const a = list.find((s) => s.id === target.id);
-      const b = list.find((s) => s.id === swapWith.id);
+      const bItem = list.find((s) => s.id === swapWith.id);
       const tmp = a.order || 0;
-      a.order = b.order || 0;
-      b.order = tmp;
+      a.order = bItem.order || 0;
+      bItem.order = tmp;
 
-      persistGlobals(null, next);
+      persistGlobals(globalCategories, next);
       return next;
     });
   };
-  const moveGlobalSubcategoryUpInCategory = (subcatId) =>
-    moveGlobalSubcategoryInCategory(subcatId, -1);
-  const moveGlobalSubcategoryDownInCategory = (subcatId) =>
-    moveGlobalSubcategoryInCategory(subcatId, +1);
 
-  // ---------- Resolver: effective (brand + global) category ----------
+  const moveGlobalSubcategoryUpInCategory = (gSubId) =>
+    moveGlobalSubcategoryInCategory(gSubId, -1);
+  const moveGlobalSubcategoryDownInCategory = (gSubId) =>
+    moveGlobalSubcategoryInCategory(gSubId, +1);
+
+  /* ---- effective resolver ---- */
+
   /**
-   * Returns an "effective" category object merging brand category with its linked global category (if any).
-   * - Inherits: displayed_in_nav, template, nav_icon, new_games_count, type, url, nav_label, slug
-   * - Structural fields (name, parent_id, is_home) come from brand.
-   * - Subcategories = brand subcats (for this brand category) FIRST, then global subcats (for linked global category).
+   * Returns an "effective" category object for runtime/lobby:
+   * - If brand category links to a global category, inherit fields from global
+   *   (displayed_in_nav, template, nav_icon, new_games_count, type, url, slug, nav_label)
+   *   but keep brand's structure: name, parent_id, is_home, order.
+   * - Subcategories: brand subs (for that category) first, then global subs (for the linked global category).
    */
   const resolveCategory = (brandId, categoryId) => {
     const b = brands.find((x) => x.id === brandId);
@@ -823,10 +831,11 @@ export function CmsProvider({ children }) {
     const cat = (b.categories || []).find((c) => c.id === categoryId);
     if (!cat) return null;
 
-    const global = cat.global_category_id
-      ? globalCategories.find((g) => g.id === cat.global_category_id) || null
+    const linked = cat.global_category_id
+      ? globalCategories.find((g) => g.id === cat.global_category_id)
       : null;
 
+    // base effective = brand structural fields
     const eff = {
       // structural (brand-owned)
       id: cat.id,
@@ -875,14 +884,26 @@ export function CmsProvider({ children }) {
       },
     };
 
-    // subcategories: brand-first then global subs
+    if (linked) {
+      // overlay from global
+      eff.displayed_in_nav = !!linked.displayed_in_nav;
+      eff.template = normalizeTemplate(linked.template);
+      eff.nav_icon = linked.nav_icon || "";
+      eff.new_games_count = !!linked.new_games_count;
+      eff.type = linked.type || "category";
+      eff.url = linked.url || "";
+      eff.slug = { ...(linked.slug || {}) };
+      eff.nav_label = { ...(linked.nav_label || {}) };
+    }
+
+    // effective subcategories: brand-first
     const brandSubs = (b.subcategories || [])
       .filter((s) => s.parent_category === cat.id)
       .sort((a, z) => (a.order || 0) - (z.order || 0));
 
-    const globalSubs = eff.global_category_id
+    const globalSubs = linked
       ? (globalCategorySubcategories || [])
-          .filter((s) => s.parent_category === eff.global_category_id)
+          .filter((s) => s.parent_category === linked.id)
           .sort((a, z) => (a.order || 0) - (z.order || 0))
       : [];
 
@@ -891,19 +912,23 @@ export function CmsProvider({ children }) {
     return eff;
   };
 
+  /* ---- value ---- */
+
   const value = {
     loading,
+    // data
     brands,
     selectedBrand,
     selection,
 
-    // NEW globals exposed
+    globalLocales,
     globalCategories,
     globalCategorySubcategories,
 
-    // resolver
+    // helpers
     resolveCategory,
 
+    // actions
     actions: {
       // selection
       selectGlobal,
@@ -913,8 +938,13 @@ export function CmsProvider({ children }) {
       selectCategory,
       selectSubcategory,
 
-      // brands/categories
+      // global locales
+      setGlobalLocales: setGlobalLocalesAction,
+
+      // brands
       updateBrand,
+
+      // brand categories
       addCategory,
       updateCategory,
       deleteCategory,
@@ -928,15 +958,15 @@ export function CmsProvider({ children }) {
       moveSubcategoryUp,
       moveSubcategoryDown,
 
-      // globals: categories
+      // global categories
       addGlobalCategory,
       updateGlobalCategory,
       deleteGlobalCategory,
       moveGlobalCategoryUp,
       moveGlobalCategoryDown,
 
-      // globals: subcategories
-      addGlobalSubcategoryToCategory,
+      // global subcategories
+      addGlobalSubcategoryInCategory,
       updateGlobalSubcategoryInCategory,
       deleteGlobalSubcategoryInCategory,
       moveGlobalSubcategoryUpInCategory,
