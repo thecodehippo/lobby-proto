@@ -37,37 +37,46 @@ function NavigateToDefault() {
 }
 
 function NavigateToHome() {
-  const { brands } = useCms();
+  const { brands, resolveCategory } = useCms();
   const { locale } = useParams();
   const navigate = useNavigate();
   React.useEffect(() => {
     const b = brands[0];
     if (!b) return;
     const home = (b.categories || []).find((c) => c.is_home);
-    const homeSlug = home?.slug?.[locale] || home?.id;
-    navigate(`/${encodeURIComponent(locale)}/${encodeURIComponent(homeSlug)}`, {
+    if (!home) return;
+    const eff = resolveCategory(b.id, home.id) || home;
+    const slug =
+      eff.slug?.[locale] ||
+      eff.slug?.[String(locale).toLowerCase()] ||
+      home.slug?.[locale] ||
+      home.slug?.[String(locale).toLowerCase()] ||
+      home.id;
+    navigate(`/${encodeURIComponent(locale)}/${encodeURIComponent(slug)}`, {
       replace: true,
     });
-  }, [brands, locale, navigate]);
+  }, [brands, locale, navigate, resolveCategory]);
   return null;
 }
 
 function CategoryPage() {
-  const { brands } = useCms();
+  const { brands, resolveCategory } = useCms();
   const { locale, categorySlug, subcatSlug } = useParams();
   const brand = brands[0]; // bwincom for now
 
   const {
-    category,
+    category, // brand-local matched category
+    effCategory, // effective (brand + global inheritance)
     parentForSubnav,
     subnavItems,
     allRootCats,
     subcategoriesForCategory,
-    selectedSubcategory, // when subcat route
+    selectedSubcategory, // when subcat route present
   } = useMemo(() => {
     if (!brand) {
       return {
         category: null,
+        effCategory: null,
         parentForSubnav: null,
         subnavItems: [],
         allRootCats: [],
@@ -77,65 +86,111 @@ function CategoryPage() {
     }
 
     const cats = brand.categories || [];
-    const subcats = brand.subcategories || [];
+    const lower = String(locale).toLowerCase();
 
-    const findCategoryBySlugOrId = (slugVal) =>
-      cats.find(
-        (c) =>
-          (c.slug?.[locale] || "").toLowerCase() ===
-          String(slugVal).toLowerCase()
-      ) || cats.find((c) => c.id === slugVal);
+    // helper: effective label/slug (tries exact locale then lowercase)
+    const slugFor = (effCat) =>
+      effCat?.slug?.[locale] ||
+      effCat?.slug?.[lower] ||
+      // fallback to brand-local slug if eff not present
+      effCat?.slug?.[locale] ||
+      effCat?.slug?.[lower];
 
-    const cat = findCategoryBySlugOrId(categorySlug) || null;
-    const parent = cat
-      ? cat.parent_id
-        ? cats.find((c) => c.id === cat.parent_id) || null
-        : cat
-      : null;
+    // Find category by matching against EFFECTIVE slug for this locale (case-insens), then by id
+    const findCategoryBySlugOrId = (slugVal) => {
+      const target = String(slugVal || "").toLowerCase();
+      let hit =
+        cats.find((c) => {
+          const eff = resolveCategory(brand.id, c.id) || c;
+          const s =
+            eff?.slug?.[locale] ||
+            eff?.slug?.[lower] ||
+            c?.slug?.[locale] ||
+            c?.slug?.[lower] ||
+            "";
+          return String(s).toLowerCase() === target;
+        }) || cats.find((c) => c.id === slugVal);
+      return hit || null;
+    };
 
+    const cat = findCategoryBySlugOrId(categorySlug);
+    if (!cat) {
+      // not found
+      return {
+        category: null,
+        effCategory: null,
+        parentForSubnav: null,
+        subnavItems: [],
+        allRootCats: [],
+        subcategoriesForCategory: [],
+        selectedSubcategory: null,
+      };
+    }
+
+    const effCat = resolveCategory(brand.id, cat.id) || cat;
+
+    // parent for subnav: if this cat has a parent, subnav shows siblings; else shows children
+    const parent = cat.parent_id
+      ? cats.find((c) => c.id === cat.parent_id) || null
+      : cat;
+
+    // roots for primary nav (parents only), filtered by effective displayed_in_nav
+    const roots = cats
+      .filter((c) => c.parent_id == null)
+      .filter((c) => {
+        const eff = resolveCategory(brand.id, c.id) || c;
+        return !!eff.displayed_in_nav;
+      })
+      .sort((a, z) => (a.order || 0) - (z.order || 0));
+
+    // siblings/children for secondary nav, filtered by effective displayed_in_nav
     const siblingsOrChildren = parent
       ? cats
           .filter((c) => c.parent_id === parent.id)
+          .filter((c) => {
+            const eff = resolveCategory(brand.id, c.id) || c;
+            return !!eff.displayed_in_nav;
+          })
           .sort((a, z) => (a.order || 0) - (z.order || 0))
       : [];
 
-    const roots = cats
-      .filter((c) => c.parent_id == null)
-      .sort((a, z) => (a.order || 0) - (z.order || 0));
+    // EFFECTIVE subcategories for the selected category (brand-first, then global; no de-dupe)
+    const subsForCat = (effCat?.subcategories || []).slice();
 
-    const subsForCat = cat
-      ? subcats
-          .filter((s) => s.parent_category === cat.id)
-          .sort((a, z) => (a.order || 0) - (z.order || 0))
-      : [];
-
-    // if subcat route present, find that subcategory under this category by slug (or exact id)
+    // If subcat route present, find that subcategory by slug (or exact id) within effective subs
     let selectedSubcat = null;
-    if (cat && subcatSlug) {
+    if (subcatSlug && subsForCat.length) {
+      const target = String(subcatSlug).toLowerCase();
       selectedSubcat =
-        subsForCat.find(
-          (s) =>
-            (s.slug?.[locale] || "").toLowerCase() ===
-            String(subcatSlug).toLowerCase()
-        ) ||
+        subsForCat.find((s) => {
+          const sSlug =
+            s.slug?.[locale] ||
+            s.slug?.[lower] ||
+            s.slug?.[String(locale)] ||
+            "";
+          return String(sSlug).toLowerCase() === target;
+        }) ||
         subsForCat.find((s) => s.id === subcatSlug) ||
         null;
     }
 
     return {
       category: cat,
+      effCategory: effCat,
       parentForSubnav: parent,
       subnavItems: siblingsOrChildren,
       allRootCats: roots,
       subcategoriesForCategory: subsForCat,
       selectedSubcategory: selectedSubcat,
     };
-  }, [brand, locale, categorySlug, subcatSlug]);
+  }, [brand, locale, categorySlug, subcatSlug, resolveCategory]);
 
   if (!brand) return <div style={{ padding: 16 }}>Loading…</div>;
-  if (!category) return <div style={{ padding: 16 }}>Category not found.</div>;
+  if (!category || !effCategory)
+    return <div style={{ padding: 16 }}>Category not found.</div>;
 
   const localeSafe = locale;
+  const lowerLocale = String(localeSafe).toLowerCase();
 
   // If subcategory is specified but not found, just show category view (all modules)
   const modulesToShow = selectedSubcategory
@@ -150,10 +205,16 @@ function CategoryPage() {
         <LocalePicker locales={brand.locales} current={localeSafe} />
       </header>
 
-      {/* Primary nav (root categories) */}
+      {/* Primary nav (root categories shown if effective displayed_in_nav=true) */}
       <nav style={styles.nav}>
         {allRootCats.map((c) => {
-          const slug = c.slug?.[localeSafe] || c.id;
+          const eff = resolveCategory(brand.id, c.id) || c;
+          const slug =
+            eff.slug?.[localeSafe] ||
+            eff.slug?.[lowerLocale] ||
+            c.slug?.[localeSafe] ||
+            c.slug?.[lowerLocale] ||
+            c.id;
           const active = c.id === category.id || c.id === category.parent_id;
           return (
             <Link
@@ -166,8 +227,12 @@ function CategoryPage() {
                 ...(active ? styles.navItemActive : {}),
               }}
             >
-              {c.nav_icon ? <Icon name={c.nav_icon} size={16} /> : null}
-              <span>{c.nav_label?.[localeSafe] || ""}</span>
+              {eff.nav_icon ? <Icon name={eff.nav_icon} size={16} /> : null}
+              <span>
+                {eff.nav_label?.[localeSafe] ||
+                  eff.nav_label?.[lowerLocale] ||
+                  ""}
+              </span>
             </Link>
           );
         })}
@@ -177,7 +242,13 @@ function CategoryPage() {
       {parentForSubnav && subnavItems.length > 0 && (
         <nav style={styles.subnav}>
           {subnavItems.map((c) => {
-            const slug = c.slug?.[localeSafe] || c.id;
+            const eff = resolveCategory(brand.id, c.id) || c;
+            const slug =
+              eff.slug?.[localeSafe] ||
+              eff.slug?.[lowerLocale] ||
+              c.slug?.[localeSafe] ||
+              c.slug?.[lowerLocale] ||
+              c.id;
             const active = c.id === category.id;
             return (
               <Link
@@ -190,36 +261,50 @@ function CategoryPage() {
                   ...(active ? styles.subnavItemActive : {}),
                 }}
               >
-                {c.nav_icon ? <Icon name={c.nav_icon} size={14} /> : null}
-                <span>{c.nav_label?.[localeSafe] || ""}</span>
+                {eff.nav_icon ? <Icon name={eff.nav_icon} size={14} /> : null}
+                <span>
+                  {eff.nav_label?.[localeSafe] ||
+                    eff.nav_label?.[lowerLocale] ||
+                    ""}
+                </span>
               </Link>
             );
           })}
         </nav>
       )}
 
-      {/* Page title */}
+      {/* Page title (use effective label) */}
       <div style={styles.titleRow}>
         <h1 style={styles.h1}>
-          {category.nav_label?.[localeSafe] || ""}
+          {effCategory.nav_label?.[localeSafe] ||
+            effCategory.nav_label?.[lowerLocale] ||
+            ""}
           {selectedSubcategory && (
             <span style={styles.h1Sub}>
-              {/* separator + subcat label if available */}
-              {selectedSubcategory.label?.[localeSafe]
-                ? ` — ${selectedSubcategory.label?.[localeSafe]}`
+              {selectedSubcategory.label?.[localeSafe] ||
+              selectedSubcategory.label?.[lowerLocale]
+                ? ` — ${
+                    selectedSubcategory.label?.[localeSafe] ||
+                    selectedSubcategory.label?.[lowerLocale]
+                  }`
                 : ""}
             </span>
           )}
         </h1>
       </div>
 
-      {/* Modules (subcategory blocks) */}
+      {/* Modules (subcategory blocks, from effective list) */}
       <section style={styles.modulesWrap}>
         {modulesToShow.map((sc) => {
-          const scSlug = sc.slug?.[localeSafe];
+          const scSlug = sc.slug?.[localeSafe] || sc.slug?.[lowerLocale];
+          const catSlug =
+            effCategory.slug?.[localeSafe] ||
+            effCategory.slug?.[lowerLocale] ||
+            category.id;
+
           const link = scSlug
             ? `/${encodeURIComponent(localeSafe)}/${encodeURIComponent(
-                category.slug?.[localeSafe] || category.id
+                catSlug
               )}/${encodeURIComponent(scSlug)}`
             : null;
 
@@ -227,8 +312,10 @@ function CategoryPage() {
             <ModuleBlock
               key={sc.id}
               icon={sc.icon}
-              label={sc.label?.[localeSafe] || ""}
-              labelSub={sc.label_sub?.[localeSafe] || ""}
+              label={sc.label?.[localeSafe] || sc.label?.[lowerLocale] || ""}
+              labelSub={
+                sc.label_sub?.[localeSafe] || sc.label_sub?.[lowerLocale] || ""
+              }
               type={sc.type}
               layout={sc.layout_type}
               href={link}
