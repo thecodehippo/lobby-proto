@@ -8,18 +8,7 @@
       },
       "environment": {
         "NODE_ENV": "production",
-        "DATABASE_URL": "postgresql://postgres:password@db:5432/lobby_cms"
-      }
-    },
-    "db": {
-      "image": "postgres:15",
-      "environment": {
-        "POSTGRES_DB": "lobby_cms",
-        "POSTGRES_USER": "postgres",
-        "POSTGRES_PASSWORD": "password"
-      },
-      "ports": {
-        "5432": "TCP"
+        "DATABASE_URL": "postgresql://postgres@localhost:5432/lobby_cms"
       }
     }
   },

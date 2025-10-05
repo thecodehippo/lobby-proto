@@ -7,7 +7,6 @@ import { fileURLToPath } from 'url'
 import path from 'path'
 const { Pool } = pkg
 
-// Load env from server/.env explicitly
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 dotenv.config({ path: path.join(__dirname, '.env') })
 
@@ -20,12 +19,11 @@ if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '../dist')))
 }
 
-// Define ENV VARS ONCE (no redeclare)
 const DATABASE_URL = process.env.DATABASE_URL
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3000
 
 if (!DATABASE_URL) {
-  console.error('Missing DATABASE_URL in server/.env')
+  console.error('Missing DATABASE_URL')
   process.exit(1)
 }
 console.log('[cms-api] Using DATABASE_URL:', DATABASE_URL)
@@ -42,7 +40,6 @@ async function ensureTable() {
         updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
     `)
-    // No seed data - data comes from SQL import or CMS usage
   } finally {
     client.release()
   }
