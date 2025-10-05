@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useCms } from "./CmsContext.jsx";
 import { CATEGORY_TEMPLATES, TEMPLATE_KEYS } from "./templates.js";
 import Icon from "@/shared/Icon.jsx";
+import TargetingEditor from "./TargetingEditor.jsx";
 
 const DEFAULT_TEMPLATE =
   (TEMPLATE_KEYS && TEMPLATE_KEYS.STANDARD) ||
@@ -105,6 +106,14 @@ export default function CategoryEditor() {
       slug: { ...(selectedCategory.slug || {}) },
       // NEW: link to global
       global_category_id: selectedCategory.global_category_id ?? null,
+      // targeting
+      targeting: {
+        devices: selectedCategory.targeting?.devices || ["mobile", "desktop"],
+        countries: selectedCategory.targeting?.countries || ["UK", "Ireland", "Austria", "Canada", "Ontario", "France"],
+        segment: selectedCategory.targeting?.segment || null,
+        internal_only: !!selectedCategory.targeting?.internal_only,
+        player_ids: selectedCategory.targeting?.player_ids || [],
+      },
     });
   }, [selectedBrand?.id, selectedCategory?.id]);
 
@@ -136,6 +145,7 @@ export default function CategoryEditor() {
       parent_id: form.is_home ? null : form.parent_id ?? null,
       is_home: !!form.is_home,
       global_category_id: form.global_category_id ?? null,
+      targeting: form.targeting,
     };
 
     let payload = base;
@@ -451,6 +461,13 @@ export default function CategoryEditor() {
           </div>
         </>
       )}
+
+      {/* Targeting */}
+      <TargetingEditor
+        targeting={form.targeting}
+        onChange={(targeting) => onChange({ targeting })}
+        disabled={false}
+      />
 
       {/* Effective subcategories preview */}
       <div style={styles.section}>Subcategories (effective order)</div>

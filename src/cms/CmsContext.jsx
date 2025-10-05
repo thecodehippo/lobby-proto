@@ -30,33 +30,7 @@ function normalizeTemplate(value) {
   return lbl || DEFAULT_TEMPLATE;
 }
 
-// ---- seed ----
-const initialBrands = [
-  {
-    id: "bwincom",
-    name: "bwincom",
-    locales: ["en-GB"],
-    categories: [
-      {
-        id: "cat-home",
-        name: "Home",
-        parent_id: null,
-        order: 0,
-        slug: { "en-GB": "home" },
-        nav_label: { "en-GB": "Home" },
-        displayed_in_nav: true,
-        template: DEFAULT_TEMPLATE,
-        is_home: true,
-        nav_icon: "home",
-        new_games_count: false,
-        type: "category",
-        url: "",
-        // global_category_id: null, // set when linked
-      },
-    ],
-    subcategories: [], // brand subcategories
-  },
-];
+// No seed data - all data comes from database/API
 
 // ---------- context ----------
 const CmsCtx = createContext(null);
@@ -72,7 +46,7 @@ export const useCms = () => useContext(CmsCtx);
  * - 'subcategory'    (brand subcategory selected)          brandId, id
  */
 export function CmsProvider({ children }) {
-  const [brands, setBrands] = useState(initialBrands);
+  const [brands, setBrands] = useState([]);
 
   // NEW: Global Categories & Global Subcategories
   const [globalCategories, setGlobalCategories] = useState([]);
@@ -195,6 +169,14 @@ export function CmsProvider({ children }) {
         type: c.type || "category",
         url: c.url || "",
         global_category_id: c.global_category_id || null,
+        // targeting
+        targeting: {
+          devices: c.targeting?.devices || ["mobile", "desktop"],
+          countries: c.targeting?.countries || ["UK", "Ireland", "Austria", "Canada", "Ontario", "France"],
+          segment: c.targeting?.segment || null,
+          internal_only: !!c.targeting?.internal_only,
+          player_ids: Array.isArray(c.targeting?.player_ids) ? c.targeting.player_ids : [],
+        },
       }));
       b.subcategories = (b.subcategories || []).map((sc) => ({
         id: sc.id || uid(),
@@ -246,6 +228,13 @@ export function CmsProvider({ children }) {
         new_games_count: !!c.new_games_count,
         type: c.type || "category",
         url: c.url || "",
+        targeting: {
+          devices: c.targeting?.devices || ["mobile", "desktop"],
+          countries: c.targeting?.countries || ["UK", "Ireland", "Austria", "Canada", "Ontario", "France"],
+          segment: c.targeting?.segment || null,
+          internal_only: !!c.targeting?.internal_only,
+          player_ids: Array.isArray(c.targeting?.player_ids) ? c.targeting.player_ids : [],
+        },
       };
     });
     return ensured;
@@ -329,6 +318,13 @@ export function CmsProvider({ children }) {
         type: "category",
         url: "",
         global_category_id: null,
+        targeting: {
+          devices: ["mobile", "desktop"],
+          countries: ["UK", "Ireland", "Austria", "Canada", "Ontario", "France"],
+          segment: null,
+          internal_only: false,
+          player_ids: [],
+        },
       };
       b.categories.push(cat);
       persist(next);
@@ -598,6 +594,13 @@ export function CmsProvider({ children }) {
         new_games_count: false,
         type: "category",
         url: "",
+        targeting: {
+          devices: ["mobile", "desktop"],
+          countries: ["UK", "Ireland", "Austria", "Canada", "Ontario", "France"],
+          segment: null,
+          internal_only: false,
+          player_ids: [],
+        },
       };
       next.push(gc);
       persistGlobals(next, null);
@@ -862,6 +865,14 @@ export function CmsProvider({ children }) {
       order: cat.order || 0,
       // linked
       global_category_id: cat.global_category_id || null,
+      // targeting (brand-owned, not inherited)
+      targeting: cat.targeting || {
+        devices: ["mobile", "desktop"],
+        countries: ["UK", "Ireland", "Austria", "Canada", "Ontario", "France"],
+        segment: null,
+        internal_only: false,
+        player_ids: [],
+      },
     };
 
     // subcategories: brand-first then global subs

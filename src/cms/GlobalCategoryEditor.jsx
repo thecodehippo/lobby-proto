@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useCms } from "./CmsContext.jsx";
 import { CATEGORY_TEMPLATES, TEMPLATE_KEYS } from "./templates.js";
 import Icon from "@/shared/Icon.jsx";
+import TargetingEditor from "./TargetingEditor.jsx";
 
 const DEFAULT_TEMPLATE =
   (TEMPLATE_KEYS && TEMPLATE_KEYS.STANDARD) ||
@@ -60,6 +61,13 @@ export default function GlobalCategoryEditor() {
         "de-at": current.nav_label?.["de-at"] || "Global",
         ...(current.nav_label || {}),
       },
+      targeting: {
+        devices: current.targeting?.devices || ["mobile", "desktop"],
+        countries: current.targeting?.countries || ["UK", "Ireland", "Austria", "Canada", "Ontario", "France"],
+        segment: current.targeting?.segment || null,
+        internal_only: !!current.targeting?.internal_only,
+        player_ids: current.targeting?.player_ids || [],
+      },
     });
   }, [current?.id]);
 
@@ -86,6 +94,7 @@ export default function GlobalCategoryEditor() {
       url: form.url || "",
       slug: { ...(form.slug || {}) },
       nav_label: { ...(form.nav_label || {}) },
+      targeting: form.targeting,
     };
     actions.updateGlobalCategory(current.id, payload);
   };
@@ -207,6 +216,12 @@ export default function GlobalCategoryEditor() {
           />
         </div>
       </div>
+
+      <TargetingEditor
+        targeting={form.targeting}
+        onChange={(targeting) => onChange({ targeting })}
+        disabled={false}
+      />
 
       <div style={styles.section}>Translations</div>
       {["en-gb", "de-at"].map((loc) => (

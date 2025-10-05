@@ -1,0 +1,38 @@
+{
+  "serviceName": "lobby-proto",
+  "containers": {
+    "app": {
+      "image": "thealligator/lobby-proto-app:latest",
+      "ports": {
+        "3000": "HTTP"
+      },
+      "environment": {
+        "NODE_ENV": "production",
+        "DATABASE_URL": "postgresql://postgres:password@db:5432/lobby_cms"
+      }
+    },
+    "db": {
+      "image": "postgres:15",
+      "environment": {
+        "POSTGRES_DB": "lobby_cms",
+        "POSTGRES_USER": "postgres",
+        "POSTGRES_PASSWORD": "password"
+      },
+      "ports": {
+        "5432": "TCP"
+      }
+    }
+  },
+  "publicEndpoint": {
+    "containerName": "app",
+    "containerPort": 3000,
+    "healthCheck": {
+      "healthyThreshold": 2,
+      "unhealthyThreshold": 2,
+      "timeoutSeconds": 5,
+      "intervalSeconds": 30,
+      "path": "/",
+      "successCodes": "200-499"
+    }
+  }
+}
