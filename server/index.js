@@ -51,7 +51,7 @@ async function getState(client) {
   return { state: rows[0].state, updated_at: rows[0].updated_at }
 }
 
-app.get('/api/health', (_req, res) => res.json({ ok: true }))
+app.get('/api/health', (_req, res) => res.json({ ok: true, deployed_via: 'github_actions' }))
 
 app.get('/api/cms', async (_req, res) => {
   try {
