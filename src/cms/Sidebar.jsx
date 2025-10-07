@@ -65,7 +65,14 @@ export default function Sidebar() {
       if (prev.__userTouched) return prev;
       const next = new Set(prev);
       const firstBrand = brands[0];
-      if (firstBrand) next.add(firstBrand.id);
+      if (firstBrand) {
+        next.add(firstBrand.id);
+        // Also expand first category in first brand
+        const firstCategory = (firstBrand.categories || [])
+          .filter((c) => c.parent_id == null)
+          .sort((a, z) => (a.order || 0) - (z.order || 0))[0];
+        if (firstCategory) next.add(firstCategory.id);
+      }
       return next;
     });
   }, [brands]);

@@ -64,8 +64,14 @@ function NavigateToHome() {
     // Home among parents (if multiple flagged, first by order wins)
     const homeRoot = roots.find((c) => c.is_home) || null;
 
-    // Fallback: first parent by order
-    const target = homeRoot || roots[0] || null;
+    // Prioritize categories with subcategories, then home, then first by order
+    const categoryWithSubs = roots.find(cat => {
+      const eff = resolveCategory(b.id, cat.id) || cat;
+      return eff.subcategories && eff.subcategories.length > 0;
+    });
+    
+    const target = categoryWithSubs || homeRoot || roots[0] || null;
+    
     if (!target) return;
 
     const lower = String(locale).toLowerCase();
