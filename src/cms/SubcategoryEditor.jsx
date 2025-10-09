@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useCms } from "./CmsContext.jsx";
 import Icon from "@/shared/Icon.jsx";
 import { ArrowUp, ArrowDown } from "lucide-react";
+import GameSelector from "./GameSelector.jsx";
 
 export default function SubcategoryEditor() {
   const { selectedBrand, selection, actions } = useCms();
@@ -46,6 +47,7 @@ export default function SubcategoryEditor() {
   const locales = selectedBrand?.locales || [];
 
   const [form, setForm] = useState(null);
+  const [showGameSelector, setShowGameSelector] = useState(false);
 
   useEffect(() => {
     if (!selectedBrand || !subcat) {
@@ -63,6 +65,7 @@ export default function SubcategoryEditor() {
       slug: { ...(subcat.slug || {}) },
       label: { ...(subcat.label || {}) },
       label_sub: { ...(subcat.label_sub || {}) },
+      selected_games: subcat.selected_games || [],
     });
   }, [selectedBrand?.id, subcat?.id]);
 
@@ -88,6 +91,7 @@ export default function SubcategoryEditor() {
       slug: { ...(form.slug || {}) },
       label: { ...(form.label || {}) },
       label_sub: { ...(form.label_sub || {}) },
+      selected_games: form.selected_games || [],
     };
     actions.updateSubcategory(selectedBrand.id, subcat.id, payload);
   };
@@ -266,6 +270,42 @@ export default function SubcategoryEditor() {
         </div>
       ))}
 
+      {/* Games Selection */}
+      {form.type === 'Game List' && (
+        <>
+          <div style={styles.section}>Games Selection</div>
+          <div style={styles.field}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <span style={styles.label}>{form.selected_games.length} games selected</span>
+              <button 
+                onClick={() => setShowGameSelector(true)} 
+                style={styles.secondaryBtn}
+              >
+                Select Games
+              </button>
+            </div>
+            {form.selected_games.length > 0 && (
+              <div style={styles.gamesList}>
+                {form.selected_games.map(game => (
+                  <div key={game.id} style={styles.gameItem}>
+                    <span>{game.name}</span>
+                    <span style={styles.gameSupplier}>{game.supplier}</span>
+                    <button 
+                      onClick={() => onChange({ 
+                        selected_games: form.selected_games.filter(g => g.id !== game.id) 
+                      })}
+                      style={styles.removeBtn}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
       {/* Actions */}
       <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
         <button onClick={save} style={styles.primaryBtn}>
@@ -275,6 +315,13 @@ export default function SubcategoryEditor() {
           Delete
         </button>
       </div>
+
+      <GameSelector
+        isOpen={showGameSelector}
+        onClose={() => setShowGameSelector(false)}
+        selectedGames={form.selected_games}
+        onGamesChange={(games) => onChange({ selected_games: games })}
+      />
     </div>
   );
 }
@@ -405,5 +452,40 @@ const styles = {
     alignItems: "center",
     gap: 12,
     marginBottom: 8,
+  },
+  secondaryBtn: {
+    padding: "6px 12px",
+    borderRadius: 6,
+    border: "1px solid #d1d5db",
+    background: "#fff",
+    color: "#374151",
+    cursor: "pointer",
+    fontSize: 12,
+  },
+  gamesList: {
+    border: "1px solid #e5e7eb",
+    borderRadius: 6,
+    maxHeight: 200,
+    overflowY: "auto",
+  },
+  gameItem: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "8px 12px",
+    borderBottom: "1px solid #f3f4f6",
+    fontSize: 13,
+  },
+  gameSupplier: {
+    color: "#6b7280",
+    fontSize: 12,
+  },
+  removeBtn: {
+    background: "none",
+    border: "none",
+    color: "#ef4444",
+    cursor: "pointer",
+    fontSize: 16,
+    padding: 2,
   },
 };

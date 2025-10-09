@@ -21,7 +21,7 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 const DATABASE_URL = process.env.DATABASE_URL
-const PORT = process.env.PORT ? Number(process.env.PORT) : 3001
+const PORT = process.env.PORT ? Number(process.env.PORT) : 3002
 
 if (!DATABASE_URL) {
   console.error('Missing DATABASE_URL')
