@@ -20,7 +20,7 @@ app.use(express.json({ limit: '1mb' }))
 app.use(express.static(path.join(__dirname, '../dist')))
 
 const DATABASE_URL = process.env.DATABASE_URL
-const PORT = process.env.PORT ? Number(process.env.PORT) : 3002
+const PORT = process.env.PORT ? Number(process.env.PORT) : 3000
 
 if (!DATABASE_URL) {
   console.error('Missing DATABASE_URL')
