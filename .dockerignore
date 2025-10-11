@@ -9,3 +9,4 @@ coverage
 .DS_Store
 dist
 !mock/game_data.json
+!mock/lobby_data.json
