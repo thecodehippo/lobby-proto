@@ -27,9 +27,10 @@ RUN cd server && npm ci --only=production
 # Copy built frontend
 COPY --from=builder /app/dist ./dist
 COPY server ./server
+COPY mock ./mock
 
 # Copy data import script
-COPY lobby_data.sql ./lobby_data.sql
+COPY mock/lobby_data.sql ./lobby_data.sql
 
 # Create supervisor config
 RUN echo '[supervisord]' > /etc/supervisord.conf && \

@@ -1,0 +1,761 @@
+{
+  "brands": [
+    {
+      "id": "bwincom",
+      "name": "Gamebookers",
+      "locales": [
+        "en-GB",
+        "de-AT"
+      ],
+      "categories": [
+        {
+          "id": "cat-m1ez74i",
+          "url": "",
+          "name": "Offers",
+          "slug": {
+            "de-AT": "offersde",
+            "en-GB": "offers"
+          },
+          "type": "category",
+          "order": 0,
+          "is_home": false,
+          "nav_icon": "gift",
+          "template": "Standard lobby category",
+          "nav_label": {
+            "de-AT": "OffersDE",
+            "en-GB": "Offers"
+          },
+          "parent_id": "huxlj93u",
+          "new_games_count": false,
+          "displayed_in_nav": true,
+          "global_category_id": null
+        },
+        {
+          "id": "cat-efmfkiz",
+          "url": "",
+          "name": "Slots",
+          "slug": {
+            "de-AT": "slotsde",
+            "en-GB": "slots"
+          },
+          "type": "category",
+          "order": 9,
+          "is_home": false,
+          "nav_icon": "star",
+          "template": "Standard lobby category",
+          "nav_label": {
+            "de-AT": "SlotsDE",
+            "en-GB": "Slots"
+          },
+          "parent_id": "huxlj93u",
+          "new_games_count": false,
+          "displayed_in_nav": true,
+          "global_category_id": null
+        },
+        {
+          "id": "cat-z4n6okl",
+          "url": "/",
+          "name": "New Games",
+          "slug": {
+            "de-AT": "newgamesde",
+            "en-GB": "newgames"
+          },
+          "type": "category",
+          "order": 10,
+          "is_home": false,
+          "nav_icon": "rocket",
+          "template": "Standard lobby category",
+          "nav_label": {
+            "de-AT": "New GamesDE",
+            "en-GB": "New Games"
+          },
+          "parent_id": "huxlj93u",
+          "new_games_count": false,
+          "displayed_in_nav": true,
+          "global_category_id": null
+        },
+        {
+          "id": "cat-s47zv2h",
+          "url": "/casino",
+          "name": "Exclusives",
+          "slug": {
+            "de-AT": "exclusivede",
+            "en-GB": "exclusives"
+          },
+          "type": "category",
+          "order": 11,
+          "is_home": false,
+          "nav_icon": "award",
+          "template": "Standard lobby category",
+          "nav_label": {
+            "de-AT": "ExclusivesDE",
+            "en-GB": "Exclusives"
+          },
+          "parent_id": "huxlj93u",
+          "new_games_count": false,
+          "displayed_in_nav": true,
+          "global_category_id": null
+        },
+        {
+          "id": "cat-mbhg79l",
+          "url": "",
+          "name": "Jackpots",
+          "slug": {
+            "de-AT": "jackpotsde",
+            "en-GB": "jackpots"
+          },
+          "type": "category",
+          "order": 13,
+          "is_home": false,
+          "nav_icon": "star",
+          "template": "Standard lobby category",
+          "nav_label": {
+            "de-AT": "JackpotsDE",
+            "en-GB": "Jackpots"
+          },
+          "parent_id": "huxlj93u",
+          "new_games_count": false,
+          "displayed_in_nav": true,
+          "global_category_id": null
+        },
+        {
+          "id": "cat-45d9sg1",
+          "url": "",
+          "name": "Roulette",
+          "slug": {
+            "de-AT": "roulettede",
+            "en-GB": "roulette"
+          },
+          "type": "category",
+          "order": 0,
+          "is_home": false,
+          "nav_icon": "target",
+          "template": "Standard lobby category",
+          "nav_label": {
+            "de-AT": "RouletteDE",
+            "en-GB": "Roulette"
+          },
+          "parent_id": "x4h6a7za",
+          "new_games_count": false,
+          "displayed_in_nav": true,
+          "global_category_id": null
+        },
+        {
+          "id": "cat-0adhv6n",
+          "url": "",
+          "name": "Blackjack",
+          "slug": {
+            "de-AT": "blackjackde",
+            "en-GB": "blackjack"
+          },
+          "type": "category",
+          "order": 1,
+          "is_home": false,
+          "nav_icon": "club",
+          "template": "Standard lobby category",
+          "nav_label": {
+            "de-AT": "BlackjackDE",
+            "en-GB": "Blackjack"
+          },
+          "parent_id": "x4h6a7za",
+          "new_games_count": false,
+          "displayed_in_nav": true,
+          "global_category_id": null
+        },
+        {
+          "id": "cat-1r24r3s",
+          "url": "",
+          "name": "Crash Games",
+          "slug": {
+            "de-AT": "crashde",
+            "en-GB": "crash"
+          },
+          "type": "category",
+          "order": 12,
+          "is_home": false,
+          "nav_icon": "car",
+          "template": "Standard lobby category",
+          "nav_label": {
+            "de-AT": "CrashDE",
+            "en-GB": "Crash"
+          },
+          "parent_id": "huxlj93u",
+          "new_games_count": false,
+          "displayed_in_nav": true,
+          "global_category_id": null
+        },
+        {
+          "id": "huxlj93u",
+          "url": "",
+          "name": "Casino",
+          "slug": {
+            "de-AT": "casinode",
+            "en-GB": "casino"
+          },
+          "type": "category",
+          "order": 13,
+          "is_home": true,
+          "nav_icon": "star",
+          "template": "Standard lobby category",
+          "nav_label": {
+            "de-AT": "CasinoDE",
+            "en-GB": "Casino"
+          },
+          "parent_id": null,
+          "new_games_count": false,
+          "displayed_in_nav": true,
+          "global_category_id": null
+        },
+        {
+          "id": "x4h6a7za",
+          "url": "",
+          "name": "Live Casino",
+          "slug": {
+            "de-AT": "livecasinode",
+            "en-GB": "livecasino"
+          },
+          "type": "category",
+          "order": 15,
+          "is_home": false,
+          "nav_icon": "card",
+          "template": "Standard lobby category",
+          "nav_label": {
+            "de-AT": "Live CasinoDE",
+            "en-GB": "Live Casino"
+          },
+          "parent_id": null,
+          "new_games_count": false,
+          "displayed_in_nav": true,
+          "global_category_id": null
+        },
+        {
+          "id": "gzp7iws0",
+          "url": "/livecasino",
+          "name": "Live Casino",
+          "slug": {
+            "de-AT": "livecasinode",
+            "en-GB": "livecasino"
+          },
+          "type": "url",
+          "order": 14,
+          "is_home": false,
+          "nav_icon": "star",
+          "template": "Standard lobby category",
+          "nav_label": {
+            "de-AT": "Live CasinoDE",
+            "en-GB": "Live Casino"
+          },
+          "parent_id": "huxlj93u",
+          "new_games_count": false,
+          "displayed_in_nav": true,
+          "global_category_id": null
+        },
+        {
+          "id": "v90yc0dm",
+          "url": "",
+          "name": "Instant Win",
+          "slug": {},
+          "type": "category",
+          "order": 15,
+          "is_home": false,
+          "nav_icon": "",
+          "template": "Standard lobby category",
+          "nav_label": {},
+          "parent_id": "huxlj93u",
+          "new_games_count": false,
+          "displayed_in_nav": true,
+          "global_category_id": "ql3hdrxo"
+        },
+        {
+          "id": "tlkecf7y",
+          "url": "",
+          "name": "Casino",
+          "slug": {
+            "de-AT": "casinode",
+            "en-GB": "casino"
+          },
+          "type": "url",
+          "order": 2,
+          "is_home": false,
+          "nav_icon": "card",
+          "template": "Standard lobby category",
+          "nav_label": {
+            "de-AT": "CasinoDE",
+            "en-GB": "Casino"
+          },
+          "parent_id": "x4h6a7za",
+          "new_games_count": false,
+          "displayed_in_nav": true,
+          "global_category_id": null
+        },
+        {
+          "id": "3zw144qd",
+          "url": "",
+          "name": "Ez Nav",
+          "slug": {
+            "de-AT": "eznavde",
+            "en-GB": "eznav"
+          },
+          "type": "category",
+          "order": 16,
+          "is_home": true,
+          "nav_icon": "star",
+          "template": "Ez Nav",
+          "nav_label": {
+            "de-AT": "Ez NavDE",
+            "en-GB": "Ez Nav"
+          },
+          "parent_id": null,
+          "new_games_count": false,
+          "displayed_in_nav": true,
+          "global_category_id": null
+        }
+      ],
+      "subcatAssets": [
+        {
+          "id": "8y7knqqa",
+          "icon": "",
+          "slug": {
+            "de-AT": "",
+            "en-GB": ""
+          },
+          "type": "Game List",
+          "label": {
+            "de-AT": "Subcategory",
+            "en-GB": "Subcategory"
+          },
+          "schedule": {
+            "end_at": null,
+            "start_at": null,
+            "recurrence": null
+          },
+          "label_sub": {
+            "de-AT": "",
+            "en-GB": ""
+          },
+          "layout_type": "Carousel",
+          "promotion_id": "",
+          "subcategory_name": "New subcategory",
+          "global_subcategory": null
+        }
+      ],
+      "subcategories": [
+        {
+          "id": "j6uwe8hy",
+          "icon": "trend",
+          "slug": {
+            "de-AT": "trendingde",
+            "en-GB": "trending"
+          },
+          "type": "Game List",
+          "label": {
+            "de-AT": "TrendingDE",
+            "en-GB": "Trending"
+          },
+          "order": 1,
+          "label_sub": {
+            "de-AT": "Finde trending",
+            "en-GB": "Find trending games now"
+          },
+          "layout_type": "Carousel",
+          "parent_category": "cat-efmfkiz",
+          "displayed_in_nav": false,
+          "subcategory_name": "Trending"
+        },
+        {
+          "id": "n51ber9x",
+          "icon": "gamepad",
+          "slug": {
+            "de-AT": "gamesglobalde",
+            "en-GB": "gamesglobal"
+          },
+          "type": "Game List",
+          "label": {
+            "de-AT": "Games GlobalsDE",
+            "en-GB": "Games Global"
+          },
+          "order": 2,
+          "label_sub": {},
+          "layout_type": "Carousel",
+          "parent_category": "cat-45d9sg1",
+          "displayed_in_nav": false,
+          "subcategory_name": "Games Global"
+        },
+        {
+          "id": "7zohwjcy",
+          "icon": "",
+          "slug": {},
+          "type": "Game List",
+          "label": {},
+          "order": 3,
+          "label_sub": {},
+          "layout_type": "Carousel",
+          "parent_category": null,
+          "displayed_in_nav": false,
+          "subcategory_name": "New subcategory"
+        },
+        {
+          "id": "wu130wuc",
+          "icon": "",
+          "slug": {},
+          "type": "Game List",
+          "label": {},
+          "order": 4,
+          "label_sub": {},
+          "layout_type": "Carousel",
+          "parent_category": null,
+          "displayed_in_nav": false,
+          "subcategory_name": "New subcategory"
+        },
+        {
+          "id": "b091bw1l",
+          "icon": "badge",
+          "slug": {
+            "de-AT": "toppicksde",
+            "en-GB": "toppicks"
+          },
+          "type": "Game List",
+          "label": {
+            "de-AT": "Top PicksDE",
+            "en-GB": "Top Picks"
+          },
+          "order": 0,
+          "label_sub": {},
+          "layout_type": "Carousel",
+          "parent_category": "huxlj93u",
+          "displayed_in_nav": false,
+          "subcategory_name": "Top Picks"
+        },
+        {
+          "id": "0zfhxlc8",
+          "icon": "badge",
+          "slug": {
+            "de-AT": "topgamesde",
+            "en-GB": "topgames"
+          },
+          "type": "Game List",
+          "label": {
+            "de-AT": "Top GamesDE",
+            "en-GB": "Top Games"
+          },
+          "order": 2,
+          "label_sub": {},
+          "layout_type": "Carousel",
+          "parent_category": "cat-efmfkiz",
+          "displayed_in_nav": true,
+          "subcategory_name": "Top Games"
+        },
+        {
+          "id": "fute0tbs",
+          "icon": "triangle",
+          "slug": {
+            "de-AT": "newgamesde",
+            "en-GB": "newgames"
+          },
+          "type": "Game List",
+          "label": {
+            "de-AT": "New GamesDE",
+            "en-GB": "New Games"
+          },
+          "order": 1,
+          "label_sub": {},
+          "layout_type": "Carousel",
+          "parent_category": "huxlj93u",
+          "displayed_in_nav": true,
+          "subcategory_name": "New Games"
+        },
+        {
+          "id": "m50co111",
+          "icon": "star",
+          "slug": {
+            "de-AT": "pragmaticde",
+            "en-GB": "pragmatic"
+          },
+          "type": "Game List",
+          "label": {
+            "de-AT": "PragmaticDE",
+            "en-GB": "Pragmatic"
+          },
+          "order": 8,
+          "label_sub": {},
+          "layout_type": "Carousel",
+          "parent_category": "cat-45d9sg1",
+          "displayed_in_nav": false,
+          "subcategory_name": "Pragmatic"
+        },
+        {
+          "id": "az6vfa9w",
+          "icon": "box",
+          "slug": {
+            "de-AT": "livecasinode",
+            "en-GB": "livecasino"
+          },
+          "type": "Game List",
+          "label": {
+            "de-AT": "Live CasinoDE",
+            "en-GB": "Live Casino"
+          },
+          "order": 2,
+          "label_sub": {
+            "en-GB": ""
+          },
+          "layout_type": "Carousel",
+          "parent_category": "huxlj93u",
+          "displayed_in_nav": true,
+          "subcategory_name": "Live Casino"
+        },
+        {
+          "id": "jinozyp5",
+          "icon": "badge",
+          "slug": {
+            "de-AT": "exclusivesde",
+            "en-GB": "exclusives"
+          },
+          "type": "Game List",
+          "label": {
+            "de-AT": "ExclusivesDE",
+            "en-GB": "Exclusives"
+          },
+          "order": 3,
+          "label_sub": {},
+          "layout_type": "Carousel",
+          "parent_category": "huxlj93u",
+          "displayed_in_nav": true,
+          "subcategory_name": "Exclusives"
+        },
+        {
+          "id": "cr5wh7nn",
+          "icon": "flame",
+          "slug": {
+            "de-AT": "indemandde",
+            "en-GB": "indemand"
+          },
+          "type": "Game List",
+          "label": {
+            "de-AT": "In-Demand",
+            "en-GB": "In-Demand"
+          },
+          "order": 4,
+          "label_sub": {
+            "de-AT": "Check out our latest and greatest",
+            "en-GB": "Check out our latest and greatest"
+          },
+          "layout_type": "Carousel",
+          "parent_category": "huxlj93u",
+          "displayed_in_nav": true,
+          "subcategory_name": "In-Demand"
+        },
+        {
+          "id": "9snjfn6v",
+          "icon": "house",
+          "slug": {
+            "de-AT": "premiumde",
+            "en-GB": "premium"
+          },
+          "type": "Game List",
+          "label": {
+            "de-AT": "PremiumDE",
+            "en-GB": "Premium"
+          },
+          "order": 6,
+          "label_sub": {},
+          "layout_type": "Carousel",
+          "parent_category": "huxlj93u",
+          "displayed_in_nav": true,
+          "subcategory_name": "Premium"
+        },
+        {
+          "id": "gka45eeu",
+          "icon": "",
+          "slug": {
+            "de-AT": "teaserde",
+            "en-GB": "teaser"
+          },
+          "type": "Module",
+          "label": {
+            "de-AT": "teaserDE",
+            "en-GB": "teaser"
+          },
+          "order": 5,
+          "label_sub": {},
+          "layout_type": "Carousel",
+          "parent_category": "huxlj93u",
+          "displayed_in_nav": true,
+          "subcategory_name": "Teaser Widget"
+        },
+        {
+          "id": "zcq13jpi",
+          "icon": "trophy",
+          "slug": {
+            "de-AT": "dropsandwinsde",
+            "en-GB": "dropsandwins"
+          },
+          "type": "Module",
+          "label": {
+            "de-AT": "Drops and winsDE",
+            "en-GB": "Drops and wins"
+          },
+          "order": 7,
+          "label_sub": {},
+          "layout_type": "Carousel",
+          "parent_category": "huxlj93u",
+          "displayed_in_nav": true,
+          "subcategory_name": "Drops and Wins"
+        },
+        {
+          "id": "dllafols",
+          "icon": "flame",
+          "slug": {
+            "de-AT": "dailymustgojackpotsde",
+            "en-GB": "dailymustgojackpots"
+          },
+          "type": "Game List",
+          "label": {
+            "de-AT": "Daily Must Go JackpotsDE",
+            "en-GB": "Daily Must Go Jackpots"
+          },
+          "order": 8,
+          "label_sub": {},
+          "layout_type": "Carousel",
+          "parent_category": "huxlj93u",
+          "displayed_in_nav": true,
+          "subcategory_name": "Daily Must Go Jackpots"
+        },
+        {
+          "id": "pqy0djuu",
+          "icon": "flame",
+          "slug": {
+            "de-AT": "jackpotkingde",
+            "en-GB": "jackpotking"
+          },
+          "type": "Module",
+          "label": {
+            "de-AT": "Jackpot KingDE",
+            "en-GB": "Jackpot King"
+          },
+          "order": 9,
+          "label_sub": {},
+          "layout_type": "Carousel",
+          "parent_category": "huxlj93u",
+          "displayed_in_nav": true,
+          "subcategory_name": "Jackpot King"
+        },
+        {
+          "id": "ls7tz1ln",
+          "icon": "car",
+          "slug": {
+            "de-AT": "megawaysde",
+            "en-GB": "megaways"
+          },
+          "type": "Game List",
+          "label": {
+            "de-AT": "MegawaysDE",
+            "en-GB": "Megaways"
+          },
+          "order": 10,
+          "label_sub": {},
+          "layout_type": "Carousel",
+          "parent_category": "huxlj93u",
+          "displayed_in_nav": true,
+          "subcategory_name": "Megaways"
+        },
+        {
+          "id": "kp5fr9ol",
+          "icon": "triangle",
+          "slug": {
+            "de-AT": "classicsde",
+            "en-GB": "classics"
+          },
+          "type": "Game List",
+          "label": {
+            "de-AT": "ClassicsDE",
+            "en-GB": "Classics"
+          },
+          "order": 11,
+          "label_sub": {},
+          "layout_type": "Carousel",
+          "parent_category": "huxlj93u",
+          "displayed_in_nav": true,
+          "subcategory_name": "Classics"
+        },
+        {
+          "id": "8b11c6sv",
+          "icon": "hand",
+          "slug": {
+            "de-AT": "gamebookerscratchcardsde",
+            "en-GB": "gamebookerscratchcards"
+          },
+          "type": "Game List",
+          "label": {
+            "de-AT": "Gamebooker ScratchcardsDE",
+            "en-GB": "Gamebooker Scratchcards"
+          },
+          "order": 19,
+          "label_sub": {},
+          "layout_type": "Carousel",
+          "parent_category": "v90yc0dm",
+          "displayed_in_nav": true,
+          "subcategory_name": "Gamebooker Scratchcards"
+        }
+      ],
+      "subcatPlacements": []
+    }
+  ],
+  "globalLocales": [
+    "en-gb",
+    "de-at",
+    "es-es"
+  ],
+  "globalCategories": [
+    {
+      "id": "ql3hdrxo",
+      "url": "",
+      "name": "Instant Win",
+      "slug": {
+        "de-at": "instantwinsde",
+        "en-gb": "instantwins",
+        "es-es": "instantwinses"
+      },
+      "type": "category",
+      "order": 0,
+      "is_home": false,
+      "nav_icon": "bomb",
+      "template": "Standard lobby category",
+      "nav_label": {
+        "de-at": "Instant WinsDE",
+        "en-gb": "Instant Wins",
+        "es-es": "Instant WinsES"
+      },
+      "parent_id": null,
+      "new_games_count": false,
+      "displayed_in_nav": true
+    }
+  ],
+  "globalCategorySubcategories": [
+    {
+      "id": "91msqdy3",
+      "icon": "",
+      "slug": {
+        "de-at": "tapgamesde",
+        "en-gb": "tapgames",
+        "es-es": "tapgameses"
+      },
+      "type": "Game List",
+      "label": {
+        "de-at": "Tap GamesDE",
+        "en-gb": "Tap Games",
+        "es-es": "Tap GamesES"
+      },
+      "order": 0,
+      "label_sub": {
+        "de-at": "",
+        "en-gb": "",
+        "es-es": ""
+      },
+      "layout_type": "Carousel",
+      "parent_category": "ql3hdrxo",
+      "displayed_in_nav": true,
+      "subcategory_name": "Tap Games"
+    }
+  ]
+}

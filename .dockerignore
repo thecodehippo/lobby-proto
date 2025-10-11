@@ -8,3 +8,4 @@ README.md
 coverage
 .DS_Store
 dist
+!mock/game_data.json
