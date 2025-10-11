@@ -8,8 +8,8 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "server": "node server/index.js",
-    "server:cwd": "cd server && node index.js"
+    "server": "PORT=3001 node server/index.js",
+    "server:prod": "node server/index.js"
   },
   "dependencies": {
     "lucide-react": "^0.544.0",
