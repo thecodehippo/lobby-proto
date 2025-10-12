@@ -360,7 +360,29 @@
           "layout_type": "Carousel",
           "parent_category": "cat-efmfkiz",
           "displayed_in_nav": false,
-          "subcategory_name": "Trending"
+          "subcategory_name": "Trending",
+          "selected_games": [
+            {
+              "id": "game_jy49ijqz",
+              "name": "Jackpot",
+              "supplier": "NetEnt"
+            },
+            {
+              "id": "game_6g58omgt",
+              "name": "Empire",
+              "supplier": "Greentube"
+            },
+            {
+              "id": "game_ubnxll0t",
+              "name": "Magic Fortune Jackpot",
+              "supplier": "Wizard Games"
+            },
+            {
+              "id": "game_0j0iug9m",
+              "name": "Phoenix",
+              "supplier": "NetEnt"
+            }
+          ]
         },
         {
           "id": "n51ber9x",
@@ -369,7 +391,7 @@
             "de-AT": "gamesglobalde",
             "en-GB": "gamesglobal"
           },
-          "type": "Game List",
+          "type": "Collection",
           "label": {
             "de-AT": "Games GlobalsDE",
             "en-GB": "Games Global"
@@ -379,7 +401,19 @@
           "layout_type": "Carousel",
           "parent_category": "cat-45d9sg1",
           "displayed_in_nav": false,
-          "subcategory_name": "Games Global"
+          "subcategory_name": "Games Global",
+          "collection": {
+            "rules": [
+              {
+                "field": "studio",
+                "operator": "==",
+                "value": "NetEnt",
+                "logic": "AND"
+              }
+            ],
+            "auto_add": true,
+            "matching_count": 112
+          }
         },
         {
           "id": "7zohwjcy",
@@ -392,7 +426,24 @@
           "layout_type": "Carousel",
           "parent_category": null,
           "displayed_in_nav": false,
-          "subcategory_name": "New subcategory"
+          "subcategory_name": "New subcategory",
+          "selected_games": [
+            {
+              "id": "game_plenf1dy",
+              "name": "Mystic Phoenix Quest",
+              "supplier": "iSoftBet"
+            },
+            {
+              "id": "game_72qkpkhk",
+              "name": "Phoenix",
+              "supplier": "NetEnt"
+            },
+            {
+              "id": "game_botzgxye",
+              "name": "Reels",
+              "supplier": "iSoftBet"
+            }
+          ]
         },
         {
           "id": "wu130wuc",
@@ -405,7 +456,24 @@
           "layout_type": "Carousel",
           "parent_category": null,
           "displayed_in_nav": false,
-          "subcategory_name": "New subcategory"
+          "subcategory_name": "New subcategory",
+          "selected_games": [
+            {
+              "id": "game_ocwwnam4",
+              "name": "Mega Dragon",
+              "supplier": "Evolution Gaming"
+            },
+            {
+              "id": "game_4qvneqpz",
+              "name": "Mega Dragon Spins",
+              "supplier": "iSoftBet"
+            },
+            {
+              "id": "game_6fdbbstd",
+              "name": "Golden Spins Quest",
+              "supplier": "Evolution Gaming"
+            }
+          ]
         },
         {
           "id": "b091bw1l",
@@ -424,7 +492,34 @@
           "layout_type": "Carousel",
           "parent_category": "huxlj93u",
           "displayed_in_nav": false,
-          "subcategory_name": "Top Picks"
+          "subcategory_name": "Top Picks",
+          "selected_games": [
+            {
+              "id": "game_0gn019po",
+              "name": "Crazy Jackpot Dragon",
+              "supplier": "NetEnt"
+            },
+            {
+              "id": "game_rgi0zezu",
+              "name": "Crazy Quest",
+              "supplier": "IGT"
+            },
+            {
+              "id": "game_415zhef2",
+              "name": "Quest",
+              "supplier": "Eyecon"
+            },
+            {
+              "id": "game_k723zblh",
+              "name": "Mystic Spins",
+              "supplier": "Gamomat"
+            },
+            {
+              "id": "game_tyebhbyk",
+              "name": "Magic Phoenix",
+              "supplier": "NetEnt"
+            }
+          ]
         },
         {
           "id": "0zfhxlc8",
@@ -433,7 +528,7 @@
             "de-AT": "topgamesde",
             "en-GB": "topgames"
           },
-          "type": "Game List",
+          "type": "Collection",
           "label": {
             "de-AT": "Top GamesDE",
             "en-GB": "Top Games"
@@ -443,7 +538,19 @@
           "layout_type": "Carousel",
           "parent_category": "cat-efmfkiz",
           "displayed_in_nav": true,
-          "subcategory_name": "Top Games"
+          "subcategory_name": "Top Games",
+          "collection": {
+            "rules": [
+              {
+                "field": "volatility",
+                "operator": "==",
+                "value": "High",
+                "logic": "AND"
+              }
+            ],
+            "auto_add": false,
+            "matching_count": 325
+          }
         },
         {
           "id": "fute0tbs",
@@ -452,7 +559,7 @@
             "de-AT": "newgamesde",
             "en-GB": "newgames"
           },
-          "type": "Game List",
+          "type": "Collection",
           "label": {
             "de-AT": "New GamesDE",
             "en-GB": "New Games"
@@ -462,7 +569,19 @@
           "layout_type": "Carousel",
           "parent_category": "huxlj93u",
           "displayed_in_nav": true,
-          "subcategory_name": "New Games"
+          "subcategory_name": "New Games",
+          "collection": {
+            "rules": [
+              {
+                "field": "releasedate",
+                "operator": "contains",
+                "value": "2024",
+                "logic": "AND"
+              }
+            ],
+            "auto_add": true,
+            "matching_count": 315
+          }
         },
         {
           "id": "m50co111",
@@ -481,7 +600,24 @@
           "layout_type": "Carousel",
           "parent_category": "cat-45d9sg1",
           "displayed_in_nav": false,
-          "subcategory_name": "Pragmatic"
+          "subcategory_name": "Pragmatic",
+          "selected_games": [
+            {
+              "id": "game_xqcd9dpm",
+              "name": "Golden Quest Reels",
+              "supplier": "Evolution Gaming"
+            },
+            {
+              "id": "game_q3oose8s",
+              "name": "Magic Phoenix Empire",
+              "supplier": "Wizard Games"
+            },
+            {
+              "id": "game_8i2e6juk",
+              "name": "Royal Empire Quest",
+              "supplier": "Greentube"
+            }
+          ]
         },
         {
           "id": "az6vfa9w",
@@ -502,7 +638,24 @@
           "layout_type": "Carousel",
           "parent_category": "huxlj93u",
           "displayed_in_nav": true,
-          "subcategory_name": "Live Casino"
+          "subcategory_name": "Live Casino",
+          "selected_games": [
+            {
+              "id": "game_0r050dou",
+              "name": "Golden Phoenix",
+              "supplier": "Play'n Go"
+            },
+            {
+              "id": "game_ibvyp7hg",
+              "name": "Crazy Phoenix Phoenix",
+              "supplier": "IGT"
+            },
+            {
+              "id": "game_mvu06eed",
+              "name": "Quest",
+              "supplier": "Red Tiger"
+            }
+          ]
         },
         {
           "id": "jinozyp5",
@@ -521,7 +674,24 @@
           "layout_type": "Carousel",
           "parent_category": "huxlj93u",
           "displayed_in_nav": true,
-          "subcategory_name": "Exclusives"
+          "subcategory_name": "Exclusives",
+          "selected_games": [
+            {
+              "id": "game_7st0wesj",
+              "name": "Mystic Fortune Phoenix",
+              "supplier": "Wizard Games"
+            },
+            {
+              "id": "game_7rb45zlj",
+              "name": "Crazy Dragon Phoenix",
+              "supplier": "iSoftBet"
+            },
+            {
+              "id": "game_o88ss8g6",
+              "name": "Wild Empire",
+              "supplier": "Gamomat"
+            }
+          ]
         },
         {
           "id": "cr5wh7nn",
@@ -543,7 +713,24 @@
           "layout_type": "Carousel",
           "parent_category": "huxlj93u",
           "displayed_in_nav": true,
-          "subcategory_name": "In-Demand"
+          "subcategory_name": "In-Demand",
+          "selected_games": [
+            {
+              "id": "game_htqr73sh",
+              "name": "Jackpot",
+              "supplier": "NetEnt"
+            },
+            {
+              "id": "game_a7f5t4eg",
+              "name": "Lucky Phoenix Reels",
+              "supplier": "Play'n Go"
+            },
+            {
+              "id": "game_gklm79m7",
+              "name": "Mega Jackpot",
+              "supplier": "Red Tiger"
+            }
+          ]
         },
         {
           "id": "9snjfn6v",
@@ -562,7 +749,24 @@
           "layout_type": "Carousel",
           "parent_category": "huxlj93u",
           "displayed_in_nav": true,
-          "subcategory_name": "Premium"
+          "subcategory_name": "Premium",
+          "selected_games": [
+            {
+              "id": "game_vqguoq13",
+              "name": "Dragon",
+              "supplier": "NetEnt"
+            },
+            {
+              "id": "game_hqwvppzq",
+              "name": "Lucky Spins",
+              "supplier": "Play'n Go"
+            },
+            {
+              "id": "game_2t15l5yn",
+              "name": "Spins",
+              "supplier": "Gamomat"
+            }
+          ]
         },
         {
           "id": "gka45eeu",
@@ -571,7 +775,7 @@
             "de-AT": "teaserde",
             "en-GB": "teaser"
           },
-          "type": "Module",
+          "type": "Game List",
           "label": {
             "de-AT": "teaserDE",
             "en-GB": "teaser"
@@ -581,7 +785,24 @@
           "layout_type": "Carousel",
           "parent_category": "huxlj93u",
           "displayed_in_nav": true,
-          "subcategory_name": "Teaser Widget"
+          "subcategory_name": "Teaser Widget",
+          "selected_games": [
+            {
+              "id": "game_ut7j6h7m",
+              "name": "Crazy Phoenix Empire",
+              "supplier": "iSoftBet"
+            },
+            {
+              "id": "game_ueuvvat3",
+              "name": "Empire",
+              "supplier": "Gamomat"
+            },
+            {
+              "id": "game_hply7mf4",
+              "name": "Crazy Reels Reels",
+              "supplier": "IGT"
+            }
+          ]
         },
         {
           "id": "zcq13jpi",
@@ -590,7 +811,7 @@
             "de-AT": "dropsandwinsde",
             "en-GB": "dropsandwins"
           },
-          "type": "Module",
+          "type": "Game List",
           "label": {
             "de-AT": "Drops and winsDE",
             "en-GB": "Drops and wins"
@@ -600,7 +821,24 @@
           "layout_type": "Carousel",
           "parent_category": "huxlj93u",
           "displayed_in_nav": true,
-          "subcategory_name": "Drops and Wins"
+          "subcategory_name": "Drops and Wins",
+          "selected_games": [
+            {
+              "id": "game_1ukqnbq1",
+              "name": "Quest",
+              "supplier": "Evolution Gaming"
+            },
+            {
+              "id": "game_rzebu4o6",
+              "name": "Magic Dragon Empire",
+              "supplier": "Wizard Games"
+            },
+            {
+              "id": "game_6amx5ln1",
+              "name": "Lucky Jackpot",
+              "supplier": "iSoftBet"
+            }
+          ]
         },
         {
           "id": "dllafols",
@@ -619,7 +857,24 @@
           "layout_type": "Carousel",
           "parent_category": "huxlj93u",
           "displayed_in_nav": true,
-          "subcategory_name": "Daily Must Go Jackpots"
+          "subcategory_name": "Daily Must Go Jackpots",
+          "selected_games": [
+            {
+              "id": "game_3fa3v7c5",
+              "name": "Fortune",
+              "supplier": "NetEnt"
+            },
+            {
+              "id": "game_9eqq6al1",
+              "name": "Magic Spins",
+              "supplier": "Wizard Games"
+            },
+            {
+              "id": "game_yic25ae9",
+              "name": "Empire",
+              "supplier": "IGT"
+            }
+          ]
         },
         {
           "id": "pqy0djuu",
@@ -628,7 +883,7 @@
             "de-AT": "jackpotkingde",
             "en-GB": "jackpotking"
           },
-          "type": "Module",
+          "type": "Game List",
           "label": {
             "de-AT": "Jackpot KingDE",
             "en-GB": "Jackpot King"
@@ -638,7 +893,24 @@
           "layout_type": "Carousel",
           "parent_category": "huxlj93u",
           "displayed_in_nav": true,
-          "subcategory_name": "Jackpot King"
+          "subcategory_name": "Jackpot King",
+          "selected_games": [
+            {
+              "id": "game_lqo7oqbq",
+              "name": "Golden Phoenix",
+              "supplier": "Eyecon"
+            },
+            {
+              "id": "game_676xqqek",
+              "name": "Golden Quest",
+              "supplier": "Evolution Gaming"
+            },
+            {
+              "id": "game_475qhow3",
+              "name": "Fortune",
+              "supplier": "NetEnt"
+            }
+          ]
         },
         {
           "id": "ls7tz1ln",
@@ -657,7 +929,24 @@
           "layout_type": "Carousel",
           "parent_category": "huxlj93u",
           "displayed_in_nav": true,
-          "subcategory_name": "Megaways"
+          "subcategory_name": "Megaways",
+          "selected_games": [
+            {
+              "id": "game_mpo1qyn6",
+              "name": "Mega Fortune",
+              "supplier": "Gamomat"
+            },
+            {
+              "id": "game_6rnfs9mg",
+              "name": "Fortune",
+              "supplier": "iSoftBet"
+            },
+            {
+              "id": "game_tyebhbyk",
+              "name": "Magic Phoenix",
+              "supplier": "NetEnt"
+            }
+          ]
         },
         {
           "id": "kp5fr9ol",
@@ -676,7 +965,24 @@
           "layout_type": "Carousel",
           "parent_category": "huxlj93u",
           "displayed_in_nav": true,
-          "subcategory_name": "Classics"
+          "subcategory_name": "Classics",
+          "selected_games": [
+            {
+              "id": "game_xfi8emws",
+              "name": "Phoenix",
+              "supplier": "Eyecon"
+            },
+            {
+              "id": "game_dn5h2bx5",
+              "name": "Wild Fortune",
+              "supplier": "Eyecon"
+            },
+            {
+              "id": "game_m71ttmfa",
+              "name": "Fortune",
+              "supplier": "Eyecon"
+            }
+          ]
         },
         {
           "id": "8b11c6sv",
@@ -695,7 +1001,24 @@
           "layout_type": "Carousel",
           "parent_category": "v90yc0dm",
           "displayed_in_nav": true,
-          "subcategory_name": "Gamebooker Scratchcards"
+          "subcategory_name": "Gamebooker Scratchcards",
+          "selected_games": [
+            {
+              "id": "game_mw3pm1qk",
+              "name": "Lucky Reels Quest",
+              "supplier": "Evolution Gaming"
+            },
+            {
+              "id": "game_0efneiv6",
+              "name": "Golden Jackpot Dragon",
+              "supplier": "Greentube"
+            },
+            {
+              "id": "game_q1avin4q",
+              "name": "Magic Empire",
+              "supplier": "Gamomat"
+            }
+          ]
         }
       ],
       "subcatPlacements": []
@@ -755,7 +1078,34 @@
       "layout_type": "Carousel",
       "parent_category": "ql3hdrxo",
       "displayed_in_nav": true,
-      "subcategory_name": "Tap Games"
+      "subcategory_name": "Tap Games",
+      "selected_games": [
+        {
+          "id": "game_9dexi0lh",
+          "name": "Quest",
+          "supplier": "Play'n Go"
+        },
+        {
+          "id": "game_4aw9mg2r",
+          "name": "Lucky Quest Fortune",
+          "supplier": "Red Tiger"
+        },
+        {
+          "id": "game_ufqm71az",
+          "name": "Jackpot",
+          "supplier": "Gamomat"
+        },
+        {
+          "id": "game_b5gd8fpp",
+          "name": "Empire",
+          "supplier": "Red Tiger"
+        },
+        {
+          "id": "game_y3kwaoci",
+          "name": "Golden Quest",
+          "supplier": "Gamomat"
+        }
+      ]
     }
   ]
 }

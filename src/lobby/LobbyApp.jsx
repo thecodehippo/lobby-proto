@@ -369,6 +369,7 @@ function CategoryPage() {
               layout={sc.layout_type}
               href={link}
               active={!!selectedSubcategory && selectedSubcategory.id === sc.id}
+              subcategory={sc}
             />
           );
         })}
@@ -416,7 +417,72 @@ function LocalePicker({ locales, current }) {
   );
 }
 
-function ModuleBlock({ icon, label, labelSub, type, layout, href, active }) {
+// Collection rule evaluation functions
+function evaluateCollectionRules(game, rules) {
+  if (rules.length === 0) return true;
+  let result = evaluateCollectionRule(game, rules[0]);
+  for (let i = 1; i < rules.length; i++) {
+    const ruleResult = evaluateCollectionRule(game, rules[i]);
+    if (rules[i].logic === 'AND') {
+      result = result && ruleResult;
+    } else {
+      result = result || ruleResult;
+    }
+  }
+  return result;
+}
+
+function evaluateCollectionRule(game, rule) {
+  const gameValue = String(game[rule.field] || '').toLowerCase();
+  const ruleValue = String(rule.value || '').toLowerCase();
+  switch (rule.operator) {
+    case '==':
+      return gameValue === ruleValue;
+    case '!=':
+      return gameValue !== ruleValue;
+    case 'contains':
+      return gameValue.includes(ruleValue);
+    case '>':
+      return parseFloat(game[rule.field]) > parseFloat(rule.value);
+    case '<':
+      return parseFloat(game[rule.field]) < parseFloat(rule.value);
+    default:
+      return false;
+  }
+}
+
+function ModuleBlock({ icon, label, labelSub, type, layout, href, active, subcategory }) {
+  const [games, setGames] = React.useState([]);
+  const [allGames, setAllGames] = React.useState([]);
+
+  // Fetch all games on mount
+  React.useEffect(() => {
+    fetch('/api/games')
+      .then(res => res.json())
+      .then(data => setAllGames(data))
+      .catch(err => console.error('Failed to load games:', err));
+  }, []);
+
+  // Filter games based on subcategory type
+  React.useEffect(() => {
+    if (!allGames.length) return;
+    
+    if (subcategory?.type === 'Collection' && subcategory?.collection?.rules?.length > 0) {
+      // Collection: filter games by rules
+      const filtered = allGames.filter(game => evaluateCollectionRules(game, subcategory.collection.rules));
+      setGames(filtered);
+    } else if (subcategory?.selected_games?.length > 0) {
+      // Game List: use manually selected games
+      const selectedGames = subcategory.selected_games.map(sg => {
+        const game = allGames.find(g => g.gameid === sg.id);
+        return game ? { ...game, order: subcategory.selected_games.findIndex(s => s.id === sg.id) } : null;
+      }).filter(Boolean).sort((a, b) => a.order - b.order);
+      setGames(selectedGames);
+    } else {
+      setGames([]);
+    }
+  }, [subcategory, allGames]);
+
   const headerInner = (
     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
       {icon ? <Icon name={icon} size={18} /> : null}
@@ -446,12 +512,28 @@ function ModuleBlock({ icon, label, labelSub, type, layout, href, active }) {
       </div>
 
       <div style={styles.moduleBody}>
-        <div style={styles.placeholderGrid}>
-          <div style={styles.placeholderCard} />
-          <div style={styles.placeholderCard} />
-          <div style={styles.placeholderCard} />
-          <div style={styles.placeholderCard} />
-        </div>
+        {(type === 'Game List' || type === 'Collection') && games.length > 0 ? (
+          <div style={styles.gamesGrid}>
+            {games.map(game => (
+              <div key={game.gameid} style={styles.gameTile}>
+                <div style={styles.gameImage}>
+                  <Icon name="gamepad2" size={24} />
+                </div>
+                <div style={styles.gameInfo}>
+                  <div style={styles.gameName}>{game.gamename}</div>
+                  <div style={styles.gameStudio}>{game.studio}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={styles.placeholderGrid}>
+            <div style={styles.placeholderCard} />
+            <div style={styles.placeholderCard} />
+            <div style={styles.placeholderCard} />
+            <div style={styles.placeholderCard} />
+          </div>
+        )}
       </div>
     </article>
   );
@@ -560,6 +642,42 @@ const styles = {
     border: "1px dashed #d1d5db",
     borderRadius: 10,
     background: "#f9fafb",
+  },
+  gamesGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))",
+    gap: 12,
+  },
+  gameTile: {
+    border: "1px solid #e5e7eb",
+    borderRadius: 8,
+    padding: 8,
+    background: "#fff",
+    cursor: "pointer",
+    transition: "all 0.2s",
+  },
+  gameImage: {
+    height: 60,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "#f3f4f6",
+    borderRadius: 6,
+    marginBottom: 8,
+    color: "#6b7280",
+  },
+  gameInfo: {
+    textAlign: "center",
+  },
+  gameName: {
+    fontSize: 12,
+    fontWeight: 600,
+    marginBottom: 2,
+    lineHeight: 1.2,
+  },
+  gameStudio: {
+    fontSize: 10,
+    color: "#6b7280",
   },
 
   empty: { padding: "16px", color: "#6b7280", fontStyle: "italic" },

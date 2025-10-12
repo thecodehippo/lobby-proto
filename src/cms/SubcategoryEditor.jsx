@@ -4,6 +4,7 @@ import { useCms } from "./CmsContext.jsx";
 import Icon from "@/shared/Icon.jsx";
 import { ArrowUp, ArrowDown } from "lucide-react";
 import GameSelector from "./GameSelector.jsx";
+import CollectionBuilder from "./CollectionBuilder.jsx";
 
 export default function SubcategoryEditor() {
   const { selectedBrand, selection, actions } = useCms();
@@ -48,6 +49,7 @@ export default function SubcategoryEditor() {
 
   const [form, setForm] = useState(null);
   const [showGameSelector, setShowGameSelector] = useState(false);
+  const [showCollectionBuilder, setShowCollectionBuilder] = useState(false);
 
   useEffect(() => {
     if (!selectedBrand || !subcat) {
@@ -65,7 +67,8 @@ export default function SubcategoryEditor() {
       slug: { ...(subcat.slug || {}) },
       label: { ...(subcat.label || {}) },
       label_sub: { ...(subcat.label_sub || {}) },
-      selected_games: subcat.selected_games || [],
+      selected_games: Array.isArray(subcat.selected_games) ? subcat.selected_games : [],
+      collection: subcat.collection || { rules: [], auto_add: false },
     });
   }, [selectedBrand?.id, subcat?.id]);
 
@@ -92,8 +95,14 @@ export default function SubcategoryEditor() {
       label: { ...(form.label || {}) },
       label_sub: { ...(form.label_sub || {}) },
       selected_games: form.selected_games || [],
+      collection: form.collection || { rules: [], auto_add: false },
     };
+    console.log('Saving subcategory with payload:', payload);
+    console.log('Selected games:', form.selected_games);
+    console.log('About to call actions.updateSubcategory with:', selectedBrand.id, subcat.id, payload);
+    console.log('Actions object:', actions);
     actions.updateSubcategory(selectedBrand.id, subcat.id, payload);
+    console.log('Called updateSubcategory');
   };
 
   const remove = () => {
@@ -286,10 +295,40 @@ export default function SubcategoryEditor() {
             </div>
             {form.selected_games.length > 0 && (
               <div style={styles.gamesList}>
-                {form.selected_games.map(game => (
+                {form.selected_games.map((game, index) => (
                   <div key={game.id} style={styles.gameItem}>
-                    <span>{game.name}</span>
-                    <span style={styles.gameSupplier}>{game.supplier}</span>
+                    <div style={styles.gameOrder}>
+                      <button 
+                        onClick={() => {
+                          if (index > 0) {
+                            const newGames = [...form.selected_games]
+                            ;[newGames[index], newGames[index - 1]] = [newGames[index - 1], newGames[index]]
+                            onChange({ selected_games: newGames })
+                          }
+                        }}
+                        disabled={index === 0}
+                        style={styles.orderBtn}
+                      >
+                        ↑
+                      </button>
+                      <button 
+                        onClick={() => {
+                          if (index < form.selected_games.length - 1) {
+                            const newGames = [...form.selected_games]
+                            ;[newGames[index], newGames[index + 1]] = [newGames[index + 1], newGames[index]]
+                            onChange({ selected_games: newGames })
+                          }
+                        }}
+                        disabled={index === form.selected_games.length - 1}
+                        style={styles.orderBtn}
+                      >
+                        ↓
+                      </button>
+                    </div>
+                    <div style={styles.gameInfo}>
+                      <span>{game.name}</span>
+                      <span style={styles.gameSupplier}>{game.supplier}</span>
+                    </div>
                     <button 
                       onClick={() => onChange({ 
                         selected_games: form.selected_games.filter(g => g.id !== game.id) 
@@ -303,6 +342,32 @@ export default function SubcategoryEditor() {
               </div>
             )}
           </div>
+        </>
+      )}
+
+      {/* Collection Builder */}
+      {form.type === 'Collection' && (
+        <>
+          <div style={styles.section}>Collection Rules</div>
+          <div style={styles.field}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <span style={styles.label}>
+                {form.collection?.rules?.length || 0} rules, {form.collection?.matching_count || 0} games match
+              </span>
+              <button 
+                onClick={() => setShowCollectionBuilder(true)} 
+                style={styles.secondaryBtn}
+              >
+                Edit Collection
+              </button>
+            </div>
+            {form.collection?.auto_add && (
+              <div style={{ fontSize: 12, color: '#059669', marginTop: 4 }}>
+                ✓ Automatically adding new games that match criteria
+              </div>
+            )}
+          </div>
+          <CollectionGamesPreview collection={form.collection} />
         </>
       )}
 
@@ -322,8 +387,103 @@ export default function SubcategoryEditor() {
         selectedGames={form.selected_games}
         onGamesChange={(games) => onChange({ selected_games: games })}
       />
+
+      <CollectionBuilder
+        isOpen={showCollectionBuilder}
+        onClose={() => setShowCollectionBuilder(false)}
+        collection={form.collection}
+        onCollectionChange={(collection) => onChange({ collection })}
+      />
     </div>
   );
+}
+
+function CollectionGamesPreview({ collection }) {
+  const [matchingGames, setMatchingGames] = useState([]);
+  const [allGames, setAllGames] = useState([]);
+
+  useEffect(() => {
+    fetch('/api/games')
+      .then(res => res.json())
+      .then(data => setAllGames(data))
+      .catch(err => console.error('Failed to load games:', err));
+  }, []);
+
+  useEffect(() => {
+    if (collection?.rules?.length > 0 && allGames.length > 0) {
+      const filtered = allGames.filter(game => evaluateCollectionRules(game, collection.rules));
+      setMatchingGames(filtered);
+    } else {
+      setMatchingGames([]);
+    }
+  }, [collection, allGames]);
+
+  if (!collection?.rules?.length) {
+    return (
+      <div style={styles.field}>
+        <div style={styles.help}>No collection rules defined. Click "Edit Collection" to add rules.</div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={styles.field}>
+      <label style={styles.label}>Matching Games ({matchingGames.length})</label>
+      {matchingGames.length > 0 ? (
+        <div style={styles.gamesList}>
+          {matchingGames.map(game => (
+            <div key={game.gameid} style={styles.gameItem}>
+              <div style={styles.gameInfo}>
+                <span>{game.gamename}</span>
+                <span style={styles.gameSupplier}>
+                  {game.gameid} • {game.studio} • {game.gametype} • {game.features}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div style={styles.help}>No games match the current collection rules.</div>
+      )}
+    </div>
+  );
+}
+
+function evaluateCollectionRules(game, rules) {
+  if (rules.length === 0) return true;
+
+  let result = evaluateCollectionRule(game, rules[0]);
+  
+  for (let i = 1; i < rules.length; i++) {
+    const ruleResult = evaluateCollectionRule(game, rules[i]);
+    if (rules[i].logic === 'AND') {
+      result = result && ruleResult;
+    } else {
+      result = result || ruleResult;
+    }
+  }
+  
+  return result;
+}
+
+function evaluateCollectionRule(game, rule) {
+  const gameValue = String(game[rule.field] || '').toLowerCase();
+  const ruleValue = String(rule.value || '').toLowerCase();
+  
+  switch (rule.operator) {
+    case '==':
+      return gameValue === ruleValue;
+    case '!=':
+      return gameValue !== ruleValue;
+    case 'contains':
+      return gameValue.includes(ruleValue);
+    case '>':
+      return parseFloat(game[rule.field]) > parseFloat(rule.value);
+    case '<':
+      return parseFloat(game[rule.field]) < parseFloat(rule.value);
+    default:
+      return false;
+  }
 }
 
 /* ---------- UI bits ---------- */
@@ -471,10 +631,33 @@ const styles = {
   gameItem: {
     display: "flex",
     alignItems: "center",
-    justifyContent: "space-between",
+    gap: 12,
     padding: "8px 12px",
     borderBottom: "1px solid #f3f4f6",
     fontSize: 13,
+  },
+  gameOrder: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 2,
+  },
+  orderBtn: {
+    background: "#f3f4f6",
+    border: "1px solid #d1d5db",
+    borderRadius: 3,
+    width: 20,
+    height: 16,
+    fontSize: 10,
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  gameInfo: {
+    flex: 1,
+    display: "flex",
+    flexDirection: "column",
+    gap: 2,
   },
   gameSupplier: {
     color: "#6b7280",

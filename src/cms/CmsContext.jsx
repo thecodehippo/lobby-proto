@@ -212,6 +212,10 @@ export function CmsProvider({ children }) {
         slug: { ...(sc.slug || {}) },
         label: { ...(sc.label || {}) },
         label_sub: { ...(sc.label_sub || {}) },
+        // games selection
+        selected_games: Array.isArray(sc.selected_games) ? sc.selected_games : [],
+        // collection rules
+        collection: sc.collection || { rules: [], auto_add: false },
       }));
     });
     return cloned;
@@ -488,6 +492,7 @@ export function CmsProvider({ children }) {
   };
 
   const updateSubcategory = (brandId, subcatId, partial) => {
+    console.log('updateSubcategory called with:', { brandId, subcatId, partial });
     setBrands((prev) => {
       const next = deepClone(prev);
       const b = next.find((x) => x.id === brandId);
@@ -496,13 +501,17 @@ export function CmsProvider({ children }) {
       if (idx === -1) return prev;
 
       const prevS = b.subcategories[idx];
+      console.log('Previous subcategory:', prevS);
       const merged = {
         ...prevS,
         ...partial,
         slug: { ...(prevS.slug || {}), ...(partial.slug || {}) },
         label: { ...(prevS.label || {}), ...(partial.label || {}) },
         label_sub: { ...(prevS.label_sub || {}), ...(partial.label_sub || {}) },
+        selected_games: partial.selected_games !== undefined ? partial.selected_games : prevS.selected_games || [],
+        collection: partial.collection !== undefined ? partial.collection : prevS.collection || { rules: [], auto_add: false },
       };
+      console.log('Merged subcategory:', merged);
 
       if (
         "parent_category" in partial &&
@@ -519,6 +528,7 @@ export function CmsProvider({ children }) {
       }
 
       b.subcategories[idx] = merged;
+      console.log('About to persist brands:', next);
       persist(next);
       return next;
     });
